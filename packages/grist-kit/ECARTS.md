@@ -105,3 +105,19 @@ Aucune incompatibilité : SCIP_grist (la plus récente et la plus complète) est
 - Faux client : aucune extension nécessaire (`/apply` gère déjà `AddRecord`/`UpdateRecord`/`RemoveRecord` sur les tables système ACL).
 - Attribut utilisateur : payload complet comparé (`name`, `tableId`, `lookupColId`, `charId`, ressource) ; s'il diffère, `UpdateRecord` (signalé dans `mises_a_jour` en `--dry-run`). SP2C ne comparait que le `name` : un attribut modifié restait périmé.
 - Ressource des règles : `planifier(souhaitees, existantes, id_par_cle)` compare aussi `resource` et replace une règle posée sur une autre ressource ; `valider` exige que la partie ressource de l'étiquette égale `resource_key`. SP2C ne comparait ni l'un ni l'autre.
+
+# Écarts entre variantes (module `maj_formules`)
+
+Comparaison par `cmp` de `sp2c/maj_formules.py` : SP2C et ses deux worktrees (`sad-yonath`, `meeting-room-booking-widget`)
+sont **identiques à l'octet près**. `etude_projet_grist` et `instances_DOE_grist` n'ont aucune variante (aucun
+`maj_formules.py`).
+
+## Changements propres à grist-kit
+
+- `schema_module` devient un paramètre **obligatoire** (signature `appliquer(client, schema_module, dry_run=False)`) :
+  plus d'import de `sp2c.schema`, plus de CLI propre au module (la commande `maj-formules` viendra à la tâche 10).
+- Clés du rapport alignées sur le plan : `formules` + `choix` fusionnent en `mises_a_jour` ; `inchangees` ajoutée
+  (colonnes suivies déjà alignées) ; `divergentes`, `absentes` et `illisibles` conservées.
+- Table ou colonne absente : hors simulation, lève `GristErreur` (message citant les absentes, renvoi vers `apply_schema`)
+  au lieu de retourner un rapport sans rien écrire ; en simulation, `absentes` est seulement listée.
+- Logique de comparaison inchangée : colonnes de données divergentes jamais écrasées, choix ajoutés sans réordonner.
