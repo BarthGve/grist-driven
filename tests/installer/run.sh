@@ -15,7 +15,7 @@ fake_env() {
   FAKE_BIN="$FAKE_ROOT/bin"; PROJECT="$FAKE_ROOT/projet"
   mkdir -p "$FAKE_BIN" "$PROJECT"
   local t p
-  for t in bash env cat mkdir dirname basename sed tr grep rm ls head cut awk sort uname date mv cp chmod printf; do
+  for t in bash env cat mkdir dirname basename sed tr grep rm ls head cut awk sort uname date mv cp chmod printf cmp find rmdir; do
     p=$(command -v "$t" 2>/dev/null) && [ -x "$p" ] && ln -sf "$p" "$FAKE_BIN/$t"
   done
   fake_cmd git 'exit 0'
