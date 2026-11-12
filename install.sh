@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-for f in questions prereqs config; do . "$ROOT/src/lib/$f.sh"; done
+for f in questions prereqs config payload; do . "$ROOT/src/lib/$f.sh"; done
 
 die() { local c=$1; shift; printf 'grist-driven : %s\n' "$*" >&2; exit "$c"; }
 info() { printf '%s\n' "$*"; }
@@ -51,18 +51,23 @@ mode_init() {
     info "[dry-run] rien n'est écrit. Seraient écrits : .grist-driven.json, .gitignore (.env)"
     config_json
     info "clé d'API : $([ -n "${GRIST_API_KEY:-}" ] && echo fournie || echo plus tard) (jamais affichée)"
+    payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
     return 0
   fi
   ignorer_env
   ecrire_config
   info "grist-driven : .grist-driven.json écrit (design system : $DESIGN_SYSTEM)."
-  # Étapes à venir, branchées ici une à une : pose du contenu (tâche 12), MCP (13), gabarit (14).
+  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+  # Étapes à venir, branchées ici une à une : MCP (13), gabarit (14).
 }
 
-# Squelettes : remplacés par les tâches suivantes.
-mode_update()    { info "update : la pose du contenu arrive avec la tâche 12."; }
+# Squelette doctor : remplacé par la tâche 16.
+mode_update() {
+  [ -f .grist-driven.json ] || die 2 "projet non initialisé : lancer d'abord « install.sh init »."
+  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+}
 mode_doctor()    { info "doctor : arrive avec la tâche 16."; }
-mode_uninstall() { info "uninstall : arrive avec la tâche 12."; }
+mode_uninstall() { payload_retire; }
 
 main() { parse_args "$@"; "mode_$MODE"; }
 main "$@"
