@@ -10,7 +10,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-for f in questions prereqs config payload; do . "$ROOT/src/lib/$f.sh"; done
+for f in questions prereqs config payload mcp; do . "$ROOT/src/lib/$f.sh"; done
 
 die() { local c=$1; shift; printf 'grist-driven : %s\n' "$*" >&2; exit "$c"; }
 info() { printf '%s\n' "$*"; }
@@ -58,13 +58,15 @@ mode_init() {
   ecrire_config
   info "grist-driven : .grist-driven.json écrit (design system : $DESIGN_SYSTEM)."
   payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
-  # Étapes à venir, branchées ici une à une : MCP (13), gabarit (14).
+  mcp_etape
+  # Étape à venir, branchée ici : gabarit (14).
 }
 
 # Squelette doctor : remplacé par la tâche 16.
 mode_update() {
   [ -f .grist-driven.json ] || die 2 "projet non initialisé : lancer d'abord « install.sh init »."
   payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+  mcp_aligner
 }
 mode_doctor()    { info "doctor : arrive avec la tâche 16."; }
 mode_uninstall() { payload_retire; }
