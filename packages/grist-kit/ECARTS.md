@@ -79,3 +79,19 @@ Aucune incompatibilité : toutes les variantes sont des sur-ensembles de SP2C, a
 - `--dry-run` sur un document à jour ne signale plus la colonne auto-référente déjà présente (SP2C la listait toujours).
 - Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-schema` (tâche 10).
 - Contrat de `schema_module` : `TABLES` et `colonnes_auto_referentes()` seulement ; `get_table()` de SP2C n'est pas requis.
+
+# Écarts entre variantes (module `maj_formules`)
+
+Comparaison par `cmp` de `sp2c/maj_formules.py` : SP2C et ses deux worktrees (`sad-yonath`, `meeting-room-booking-widget`)
+sont **identiques à l'octet près**. `etude_projet_grist` et `instances_DOE_grist` n'ont aucune variante (aucun
+`maj_formules.py`).
+
+## Changements propres à grist-kit
+
+- `schema_module` devient un paramètre **obligatoire** (signature `appliquer(client, schema_module, dry_run=False)`) :
+  plus d'import de `sp2c.schema`, plus de CLI propre au module (la commande `maj-formules` viendra à la tâche 10).
+- Clés du rapport alignées sur le plan : `formules` + `choix` fusionnent en `mises_a_jour` ; `inchangees` ajoutée
+  (colonnes suivies déjà alignées) ; `divergentes`, `absentes` et `illisibles` conservées.
+- Table ou colonne absente : hors simulation, lève `GristErreur` (message citant les absentes, renvoi vers `apply_schema`)
+  au lieu de retourner un rapport sans rien écrire ; en simulation, `absentes` est seulement listée.
+- Logique de comparaison inchangée : colonnes de données divergentes jamais écrasées, choix ajoutés sans réordonner.
