@@ -13,11 +13,10 @@ LIB = RACINE / "src" / "lib"
 LOT_A = ["prd", "init", "stories", "stories-review", "architect", "design-system"]
 LOT_B = ["research", "design", "plan", "docs"]
 LOT_C = ["execute", "review", "ship", "release", "feature", "continue", "status", "help", "orchestrator"]
+LOT_D = ["schema", "acl", "widget", "deploy", "recette", "optimise"]
 # Chaque lot ajoute ses noms : un test qui ne regarde que les fichiers présents passerait à vide.
-ATTENDUES = LOT_A + LOT_B + LOT_C
+ATTENDUES = LOT_A + LOT_B + LOT_C + LOT_D
 
-# Commandes de la tâche 20 : citées avant d'exister. À vider quand la tâche 20 les écrit.
-PREVUES_TACHE_20 = {"grist-schema", "grist-acl", "grist-widget", "grist-deploy", "grist-recette", "grist-optimise"}
 
 RESTES = re.compile(r"\bdm-|\bks-|\.dm/")
 SOUS_COMMANDES_TABLEAU = {
@@ -49,7 +48,7 @@ def test_les_commandes_attendues_existent():
 
 def test_aucune_commande_en_trop():
     presentes = sorted(p.stem for p in COMMANDES.glob("grist-*.md"))
-    assert [p for p in presentes if p.removeprefix("grist-") not in ATTENDUES + ["schema", "acl", "widget", "deploy", "recette", "optimise"]] == []
+    assert [p for p in presentes if p.removeprefix("grist-") not in ATTENDUES] == []
 
 
 @pytest.mark.parametrize("nom", ATTENDUES)
@@ -82,8 +81,7 @@ def test_aucune_reference_a_dm(nom):
 def test_toute_commande_citee_existe(nom):
     if not _fichier(nom).is_file():
         pytest.skip("pas encore écrite")
-    # les lots suivants citent des commandes pas encore écrites : l'existence finale est garantie par test_les_commandes_attendues_existent
-    existantes = {f"grist-{n}" for n in LOT_A + LOT_B + LOT_C} | PREVUES_TACHE_20
+    existantes = {f"grist-{n}" for n in ATTENDUES}
     # (?<![\w./-]) : ni chemin (.grist/lib/grist-board.sh), ni dossier (src/skills/grist-tdd)
     citees = set(re.findall(r"(?<![\w./`-])/(grist-[a-z]+(?:-[a-z]+)*)\b(?![.\w])", _texte(nom)))
     assert citees - existantes == set()
@@ -191,3 +189,51 @@ def test_status_et_help_listent_toutes_les_commandes_du_flux():
         if nom not in ("help", "status") and _fichier(nom).is_file():
             assert f"/grist-{nom}" in _texte("help"), nom
     assert "status-all" in _texte("status")
+
+
+def test_grist_deploy_cite_l_ordre_exact():
+    texte = _texte("deploy")
+    etapes = ["apply-schema", "maj-formules", "apply-acl", "amorcer", "creer-page", "deployer"]
+    positions = [texte.index(f"grist_kit {e}") for e in etapes]
+    assert positions == sorted(positions)
+    assert "--check" in texte and "divergentes" in texte and "--dry-run" in texte
+    assert re.search(r"version", texte, re.I)
+
+
+def test_grist_schema_cite_maj_formules_apres_un_changement_de_formule():
+    assert re.search(r"maj-formules --dry-run` après un changement de formule", _texte("schema"))
+
+
+def test_grist_schema_et_acl_imposent_dry_run_d_abord():
+    for nom, cmd in (("schema", "apply-schema"), ("acl", "apply-acl")):
+        texte = _texte(nom)
+        assert f"{cmd} --dry-run" in texte and "accord" in texte, nom
+        assert texte.index(f"{cmd} --dry-run") < texte.index("sans `--dry-run`"), nom
+    assert "permis" in _texte("acl") and "refus" in _texte("acl")
+
+
+def test_grist_widget_distingue_les_deux_profils():
+    texte = _texte("widget")
+    assert ".grist-driven.json" in texte and "design_system" in texte
+    assert "Profil `dsfr`" in texte and "Profil `ui-kit`" in texte
+    assert "node:test" in texte and "inliner" in texte and "npm run build" in texte
+
+
+def test_grist_recette_cite_aclasuser():
+    texte = _texte("recette")
+    assert "?aclAsUser_=" in texte and "profil × table × droit" in texte
+
+
+@pytest.mark.parametrize("nom", LOT_D)
+def test_aucune_commande_n_ecrit_la_structure_via_le_mcp(nom):
+    assert re.search(r"jamais par le MCP|MCP[^.\n]*jamais|MCP n'y a aucune part", _texte(nom)), nom
+
+
+def test_grist_optimise_exige_une_mesure_avant_et_apres():
+    texte = _texte("optimise")
+    assert "mesure avant" in texte.lower() and "mesure après" in texte.lower()
+    assert "docs/revue-performance.md" in texte and "borne" in texte
+
+
+def test_grist_optimise_cite_le_skill_grist_perf():
+    assert "skill `grist-perf`" in _texte("optimise")
