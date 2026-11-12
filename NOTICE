@@ -1,0 +1,9 @@
+grist-driven — Copyright (c) 2026 Bruno Gauville, licence MIT (voir LICENSE).
+
+La licence MIT ne couvre que le contenu propre à ce dépôt.
+
+Filiation : la méthode de travail (commandes, skills, agents, scripts du flux)
+descend de ai-driven-method, lui-même issu de killer-saas (Mike Codeur).
+Les fichiers hérités de ces projets ne sont pas relicensés ici : tout fichier
+resté proche de l'original est réécrit avant d'entrer dans ce dépôt (voir
+docs/provenance.md une fois l'audit produit).

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grist-kit"
+version = "0.1.0"
+description = "Outils Python pour construire des applications Grist"
+requires-python = ">=3.11"
+dependencies = ["requests", "python-dotenv"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["grist_kit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
