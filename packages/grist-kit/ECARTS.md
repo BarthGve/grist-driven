@@ -141,3 +141,24 @@ la branche d'etude_projet_grist ajoute `etude_flux/widgets.py`, dont `_verifier_
 - Les réponses de la session HTTP (PATCH et relecture) passent par `_verifie` : tout statut ≥ 300 lève `GristErreur`
   (403 : message pare-feu ; 413 : bundle trop gros), au lieu de `raise_for_status()` et sa trace brute.
 - « écriture non conforme » lève `GristErreur` (au lieu de `SystemExit`).
+
+# Écarts entre variantes (module `build_uikit`, profil ui-kit)
+
+Source : `etude_projet_grist/deployer_widgets.py` (seule variante : `chargeur_gzip` et le dépôt du bundle) et
+`widgets_ui/{build.mjs,package.json,vite.config.ts}` (contrat : `dist/<entrée>.html`, ligne `<entrée> : N Ko` par build).
+La branche `refactor/deployeur-standard` n'a pas de profil ui-kit. Aucun arbitrage.
+
+## Changements propres à grist-kit
+
+- `chargeur_gzip` porté **à l'identique** (gzip 9, `mtime=0`, base64, `DecompressionStream`).
+- Le dépôt devient `deployer_uikit(client, config, nom, widgets_ui, check=False, session=None) -> int`, dans `grist_kit/build_uikit.py`
+  (pas dans `deployer.py`, laissé intact : il en importe `verifier_section`, `corps_patch`, `ouvrir_session`, `_verifie`, `synchroniser_champs`).
+  Plus de `WIDGETS` codé en dur ni de `creer_page` dans la boucle (`creer-page` est une commande à part) : la section vient de `widgets.json`,
+  l'entrée construite de `widgets[nom]["entree"]` (défaut : le nom du widget).
+- Ajouts par rapport à `deployer_widgets.py` : garde-fou `verifier_section` (section/document), mode `check` (compare au `dist/`),
+  relecture et vérification après PATCH, réponses HTTP ≥ 300 en `GristErreur` (au lieu de `raise_for_status()`).
+- **Limite de taille** : `LIMITE_API_OCTETS = 1_000_000`, mesurée sur le **corps du PATCH** (le pare-feu impose un échappement `\uXXXX` qui gonfle
+  la base64 : mesurer la seule charge compressée sous-estimerait). Au-delà : `GristErreur` (« 413 … Réduire le bundle … ») **avant** toute écriture.
+- `construire(widgets_ui, entrees=None)` : nouveau ; `npm ci` puis `node build.mjs [entrées]`, `GristErreur` claire si `node` absent ou < 20, ou `npm` absent ;
+  sortie et code d'erreur des commandes cités. Taille lue sur les lignes `<entrée> : N Ko` de `build.mjs`.
+- Non repris : `synchroniser_changelog` (table `CHANGELOG` propre à ce projet ; le journal des versions relève de `versions.py`).
