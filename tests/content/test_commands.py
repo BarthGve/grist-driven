@@ -14,7 +14,7 @@ LOT_A = ["prd", "init", "stories", "stories-review", "architect", "design-system
 LOT_B = ["research", "design", "plan", "docs"]
 LOT_C = ["execute", "review", "ship", "release", "feature", "continue", "status", "help", "orchestrator"]
 # Chaque lot ajoute ses noms : un test qui ne regarde que les fichiers présents passerait à vide.
-ATTENDUES = LOT_A  # + LOT_B au lot 19b, + LOT_C au lot 19c
+ATTENDUES = LOT_A + LOT_B  # + LOT_C au lot 19c
 
 # Commandes de la tâche 20 : citées avant d'exister. À vider quand la tâche 20 les écrit.
 PREVUES_TACHE_20 = {"grist-schema", "grist-acl", "grist-widget", "grist-deploy", "grist-recette", "grist-optimise"}
