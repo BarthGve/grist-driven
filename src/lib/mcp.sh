@@ -23,7 +23,7 @@ mcp_detecter() {
 
 # Python « externally managed » (PEP 668) : pip --user est alors interdit.
 _mcp_pep668() {
-  local d; d=$(python3 -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null) || return 1
+  local d; d=$(python3 -I -c 'import sysconfig; print(sysconfig.get_path("stdlib"))' 2>/dev/null) || return 1
   [ -e "$d/EXTERNALLY-MANAGED" ]
 }
 
@@ -48,11 +48,11 @@ _mcp_accord() { # <question>
   case $(printf %s "$REPONSE" | tr 'A-Z' 'a-z') in ""|o|oui|y|yes) return 0;; *) return 1;; esac
 }
 
-# Installe isolé : pipx, puis uv tool, puis pip --user (sauf PEP 668). 0 si installé.
+# Installe isolé, depuis « / » (la config du projet ne peut pas rediriger l'index) : pipx, puis uv tool, puis pip --user (sauf PEP 668). 0 si installé.
 mcp_installer() {
-  if _mcp_a pipx; then pipx install --force "$_MCP_PAQUET" >/dev/null 2>&1
-  elif _mcp_a uv; then uv tool install --force "$_MCP_PAQUET" >/dev/null 2>&1
-  elif _mcp_a pip && ! _mcp_pep668; then pip install --user "$_MCP_PAQUET" >/dev/null 2>&1
+  if _mcp_a pipx; then ( cd / && pipx install --force "$_MCP_PAQUET" ) >/dev/null 2>&1
+  elif _mcp_a uv; then ( cd / && uv tool install --force "$_MCP_PAQUET" ) >/dev/null 2>&1
+  elif _mcp_a pip && ! _mcp_pep668; then ( cd / && pip install --user "$_MCP_PAQUET" ) >/dev/null 2>&1
   else return 1; fi
 }
 

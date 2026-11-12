@@ -39,7 +39,7 @@ test_repli_uv_si_pas_de_pipx() {
 
 test_pep668_sans_outils_affiche_la_commande_et_continue() {
   mkdir -p "$FAKE_ROOT/stdlib"; : > "$FAKE_ROOT/stdlib/EXTERNALLY-MANAGED"
-  fake_cmd python3 'case "$1" in -c) echo "$FAKE_STDLIB";; *) echo "Python 3.12.1";; esac'
+  fake_cmd python3 'case "$*" in *-c*) echo "$FAKE_STDLIB";; *) echo "Python 3.12.1";; esac'
   fake_enregistreur pip
   FAKE_STDLIB="$FAKE_ROOT/stdlib" run_install init $MCP_FLAGS --mcp install
   assert_rc 0 || return 1
