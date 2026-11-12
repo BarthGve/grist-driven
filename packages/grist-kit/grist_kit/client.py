@@ -3,6 +3,7 @@
 import logging
 import os
 import time
+from urllib.parse import urljoin, urlsplit
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -30,6 +31,12 @@ def _message(code: int, corps: str) -> str:
             f"Réduire le contenu envoyé (ex. bundle de widget). Détail : {detail}"
         )
     return f"HTTP {code}. Détail : {detail}"
+
+
+def _origine(url: str) -> tuple:
+    u = urlsplit(url)
+    port = u.port or {"http": 80, "https": 443}.get(u.scheme)
+    return (u.scheme, u.hostname, port)
 
 
 class GristClient:
@@ -77,7 +84,14 @@ class GristClient:
                 method, url, headers=self.headers, json=data, timeout=30, allow_redirects=False
             )
             if response.status_code in (301, 302, 303, 307, 308) and response.headers.get("Location"):
-                url = response.headers["Location"]
+                cible = urljoin(url, response.headers["Location"])
+                # Jamais envoyer la clé d'API hors de l'origine de base_url (schéma, hôte, port).
+                if _origine(cible) != _origine(self.base_url):
+                    raise GristErreur(
+                        f"Redirection refusée vers une autre origine ({_origine(cible)}) : "
+                        "la clé d'API n'est envoyée qu'à l'hôte configuré (GRIST_API_HOST)."
+                    )
+                url = cible
                 continue
             # Le pare-feu (Incapsula) refuse parfois une requête saine, puis l'accepte telle quelle.
             if response.status_code == 403 and "Incapsula" in response.text and refus < 2:
@@ -87,7 +101,7 @@ class GristClient:
             break
         self._derniere = time.monotonic()
 
-        if response.status_code >= 400:
+        if response.status_code >= 300:
             msg = _message(response.status_code, response.text)
             logger.error("Erreur requête Grist %s %s: %s", method, endpoint, msg)
             raise GristErreur(msg)

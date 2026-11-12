@@ -76,3 +76,31 @@ def test_fetch_table_via_faux_client():
     c = GristClient(api_key="k", doc_id="DOC")
     c._make_request = faux._make_request
     assert c.fetch_table("T") == [{"id": 1, "fields": {"a": 1}}]
+
+
+class _SessionRedirection:
+    def __init__(self, location):
+        self.location, self.urls = location, []
+
+    def request(self, method, url, **k):
+        self.urls.append(url)
+        r = _Reponse(302, "")
+        r.headers = {"Location": self.location}
+        return r
+
+
+@pytest.mark.parametrize("cible", ["https://autre.test/x", "http://grist.exemple.test/api/x"])
+def test_redirection_vers_autre_origine_refusee(cible):
+    c = _client(_Reponse(200, ""))
+    c._session = _SessionRedirection(cible)
+    with pytest.raises(GristErreur, match="Redirection refusée"):
+        c._make_request("GET", "/tables")
+    assert len(c._session.urls) == 1
+
+
+def test_redirection_relative_meme_origine_suivie():
+    c = _client(_Reponse(200, ""))
+    c._session = _SessionRedirection("/api/docs/DOC/tables?loading=1")
+    with pytest.raises(GristErreur):  # boucle de 302 : 8 essais puis HTTP 302 → erreur, pas de fuite
+        c._make_request("GET", "/tables")
+    assert all(u.startswith("https://grist.exemple.test/") for u in c._session.urls)
