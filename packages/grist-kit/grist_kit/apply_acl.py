@@ -25,23 +25,29 @@ def _etiquette(memo):
 
 
 def valider(souhaitees):
-    """Refuse, avant tout appel réseau, une règle sans étiquette ou deux règles de même étiquette."""
+    """Refuse, avant tout appel réseau, une règle sans étiquette, deux règles de même étiquette, ou une
+    étiquette dont la partie ressource diffère de `resource_key`."""
     vues = set()
     for s in souhaitees:
         cle = _etiquette(s.get("memo"))
         if cle is None:
             raise ValueError(
                 f"Règle sans étiquette `[<app>:<ressource>#<n>]` en tête du memo : {s.get('memo')!r}")
+        if "resource_key" in s and cle[0] != s["resource_key"]:
+            raise ValueError(
+                f"Étiquette incohérente avec resource_key : [{cle[0]}#{cle[1]}] pour la ressource "
+                f"{s['resource_key']!r} ({s['memo']!r})")
         if cle in vues:
             raise ValueError(f"Étiquette en double : [{cle[0]}#{cle[1]}] ({s['memo']!r})")
         vues.add(cle)
 
 
-def planifier(souhaitees, existantes):
+def planifier(souhaitees, existantes, id_par_cle=None):
     """Compare règles souhaitées et existantes ; ne fait aucun appel réseau.
 
     `souhaitees` : règles de `regles_module.RULES`. `existantes` : dicts à plat
-    {id, resource, aclFormula, permissionsText, memo, rulePos}.
+    {id, resource, aclFormula, permissionsText, memo, rulePos}. `id_par_cle` (optionnel) : id de ressource par
+    `resource_key` ; si fourni, une règle posée sur une autre ressource est replacée (clé absente ou None : ignorée).
     """
     plan = {"ajouts": [], "mises_a_jour": [], "obsoletes": []}
     par_etiquette = {}
@@ -62,6 +68,9 @@ def planifier(souhaitees, existantes):
         for champ in ("aclFormula", "permissionsText", "memo"):
             if courante.get(champ, "") != s[champ]:
                 plan["mises_a_jour"].append((courante["id"], {champ: s[champ]}))
+        voulue = (id_par_cle or {}).get(s.get("resource_key"))
+        if voulue is not None and courante.get("resource") != voulue:
+            plan["mises_a_jour"].append((courante["id"], {"resource": voulue}))
 
     # Ordre relatif au sein de chaque ressource : Grist fractionne les rulePos, seul l'ordre compte ;
     # on le force s'il ne suit pas l'ordre souhaité.
@@ -127,17 +136,29 @@ def appliquer(client, regles_module, dry_run=False, prune=False):
         id_par_cle[res["key"]] = ressources.get(cle)
 
     existantes = _lire(client, "_grist_ACLRules")
+    maj_attributs = []
     for attr in regles_module.USER_ATTRIBUTES:
-        deja = any(json.loads(r["userAttributes"]).get("name") == attr["name"]
-                   for r in existantes if r.get("userAttributes"))
-        if not deja and not dry_run:
-            payload = {k: attr[k] for k in ("name", "tableId", "lookupColId", "charId")}
-            client._make_request("POST", "/apply", [[
-                "AddRecord", "_grist_ACLRules", -1,
-                {"resource": id_par_cle[attr["resource_key"]],
-                 "userAttributes": json.dumps(payload), "rulePos": 0}]])
+        payload = {k: attr[k] for k in ("name", "tableId", "lookupColId", "charId")}
+        courante = next((r for r in existantes if r.get("userAttributes")
+                         and json.loads(r["userAttributes"]).get("name") == attr["name"]), None)
+        if courante is None:
+            if not dry_run:
+                client._make_request("POST", "/apply", [[
+                    "AddRecord", "_grist_ACLRules", -1,
+                    {"resource": id_par_cle[attr["resource_key"]],
+                     "userAttributes": json.dumps(payload), "rulePos": 0}]])
+            continue
+        champs = {}
+        if json.loads(courante["userAttributes"]) != payload:
+            champs["userAttributes"] = json.dumps(payload)
+        voulue = id_par_cle.get(attr["resource_key"])
+        if voulue is not None and courante.get("resource") != voulue:
+            champs["resource"] = voulue
+        if champs:
+            maj_attributs.append((courante["id"], champs))
 
-    plan = planifier(regles_module.RULES, existantes)
+    plan = planifier(regles_module.RULES, existantes, id_par_cle)
+    plan["mises_a_jour"] += maj_attributs
     if dry_run:
         return plan
     actions = []

@@ -103,3 +103,5 @@ Aucune incompatibilité : SCIP_grist (la plus récente et la plus complète) est
 - Validation avant tout appel réseau (`valider`) : étiquette manquante ou en double -> `ValueError` claire, rien n'est écrit.
 - Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-acl` (tâche 10).
 - Faux client : aucune extension nécessaire (`/apply` gère déjà `AddRecord`/`UpdateRecord`/`RemoveRecord` sur les tables système ACL).
+- Attribut utilisateur : payload complet comparé (`name`, `tableId`, `lookupColId`, `charId`, ressource) ; s'il diffère, `UpdateRecord` (signalé dans `mises_a_jour` en `--dry-run`). SP2C ne comparait que le `name` : un attribut modifié restait périmé.
+- Ressource des règles : `planifier(souhaitees, existantes, id_par_cle)` compare aussi `resource` et replace une règle posée sur une autre ressource ; `valider` exige que la partie ressource de l'étiquette égale `resource_key`. SP2C ne comparait ni l'un ni l'autre.

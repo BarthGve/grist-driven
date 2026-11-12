@@ -171,3 +171,40 @@ def test_ressource_a_renommer():
     assert ressource_a_renommer("docs", "DOCS", existantes, ressources) == 10
     assert ressource_a_renommer("autre", "DOCS", existantes, ressources) is None
     assert ressource_a_renommer("docs", "AUTRE", existantes, ressources) is None
+
+
+def test_attribut_utilisateur_modifie_est_mis_a_jour():
+    c = ClientFactice()
+    appliquer(c, regles_exemple)
+    m = _module()
+    m.USER_ATTRIBUTES[0]["lookupColId"] = "courriel"
+    # dry-run : signalé dans le plan, rien d'écrit
+    avant = len(c.ecritures())
+    plan = appliquer(c, m, dry_run=True)
+    assert len(plan["mises_a_jour"]) == 1 and len(c.ecritures()) == avant
+    plan = appliquer(c, m)
+    attrs = [json.loads(r["userAttributes"]) for r in _regles(c).values() if r.get("userAttributes")]
+    assert len(attrs) == 1 and attrs[0]["lookupColId"] == "courriel"
+    assert appliquer(c, m) == {"ajouts": [], "mises_a_jour": [], "obsoletes": []}
+
+
+def test_regle_changee_de_ressource_est_mise_a_jour():
+    # dérive : la règle a été déplacée sur une autre ressource dans le document
+    c = ClientFactice()
+    appliquer(c, regles_exemple)
+    id_defaut = next(i for i, r in c.records["_grist_ACLResources"].items() if r["tableId"] == "*")
+    id_regle, regle = _par_memo(c, "[demo:docs#3]")
+    voulue = regle["resource"]
+    regle["resource"] = id_defaut
+    plan = appliquer(c, regles_exemple)
+    assert plan["mises_a_jour"] == [(id_regle, {"resource": voulue})] and plan["ajouts"] == []
+    assert _par_memo(c, "[demo:docs#3]")[1]["resource"] == voulue
+
+
+def test_etiquette_incoherente_avec_resource_key_refusee():
+    c = ClientFactice()
+    m = _module()
+    m.RULES[2]["resource_key"] = "default"        # étiquette `docs`, ressource `default`
+    with pytest.raises(ValueError, match="resource_key"):
+        appliquer(c, m)
+    assert c.appels == []
