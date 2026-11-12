@@ -20,3 +20,19 @@ arbitrage demandé. `cadence` et `pause_refus` sont des attributs de classe (mis
 - Toute réponse HTTP ≥ 400 lève `GristErreur` (sous-classe de `RuntimeError`) au message lisible ; 403 : « pare-feu »
   + droits de la clé ; 413 : bundle trop gros. Les erreurs réseau (`requests`) ne sont pas encapsulées.
 - `faux_grist.py` porté tel quel, sauf `base_url` neutralisée (`https://grist.test/o/demo/api`, au lieu d'un nom de projet).
+
+# Écarts entre variantes (module `pages`, ex-`creer_page`)
+
+Comparaison à l'octet (`cmp`) de `outils_grist/creer_page.py` : SP2C, SCIP_grist, ST_parcours-managerial,
+nanterre-grist-projet, sirpa, portfolio_grist, ppn_grist, etude_risques. Les huit sont **identiques** ; aucun arbitrage.
+(`etude_projet_grist` n'a pas ce fichier.)
+
+## Changements propres à grist-kit
+
+- `grist_kit/pages.py` : plus de `sys.path`, de `RACINE`, de `CONFIG` global ni de `main` (la CLI relève de la tâche 10) ;
+  `charger_config(chemin)` et `ecrire_config(chemin, config)` prennent le chemin en paramètre.
+- L'entrée de `widgets.json` porte aussi `table_id`.
+- `creer` consigne `config["doc_id"] = client.doc_id` à la première création et refuse (`ValueError`) si
+  `config["doc_id"]` diffère du document courant.
+- Validations avant toute écriture : accès hors `read table` / `full` et table inconnue lèvent `ValueError` (au lieu de `StopIteration`).
+- Faux client : aucune extension nécessaire (`CreateViewSection` et `/apply` y existaient déjà).
