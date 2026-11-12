@@ -121,3 +121,23 @@ sont **identiques à l'octet près**. `etude_projet_grist` et `instances_DOE_gri
 - Table ou colonne absente : hors simulation, lève `GristErreur` (message citant les absentes, renvoi vers `apply_schema`)
   au lieu de retourner un rapport sans rien écrire ; en simulation, `absentes` est seulement listée.
 - Logique de comparaison inchangée : colonnes de données divergentes jamais écrasées, choix ajoutés sans réordonner.
+
+# Écarts entre variantes (module `deployer`, profil dsfr)
+
+Comparaison de `outils_grist/deployer.py` : SP2C, SCIP_grist, ppn_grist, sirpa ; `etude_projet_grist`
+(branche `refactor/deployeur-standard`, `outils_grist/deployer.py`). Les cinq sont **identiques à l'octet près** ;
+la branche d'etude_projet_grist ajoute `etude_flux/widgets.py`, dont `_verifier_section` est le même contrôle que celui de
+`SP2C/sp2c/widgets.py`. Aucun arbitrage.
+
+## Changements propres à grist-kit
+
+- `main()` devient `deployer(client, config, nom, racine, check=False, session=None) -> int` : plus de `sys.path`,
+  `load_dotenv`, `RACINE`/`CONFIG` globaux ni `argparse` (la CLI relève de la tâche 10). `session` est injectable
+  (`SessionFactice` en test) ; à défaut, `ouvrir_session(client)`.
+- `_verifier_section` devient `verifier_section(client, config, nom)`, appelée **avant toute écriture** : la table attendue
+  vient de `config["widgets"][nom]["table_id"]` (plus de `schema.PAGES_PAR_WIDGET`). Elle refuse aussi si
+  `config["doc_id"]` ≠ `client.doc_id` (ajout par rapport à SP2C). Refus en `ValueError` citant `creer-page` (au lieu de `SystemExit`).
+- `section_du_widget` lève `ValueError` (au lieu de `SystemExit`) ; sa consigne cite `python -m grist_kit creer-page`.
+- Les réponses de la session HTTP (PATCH et relecture) passent par `_verifie` : tout statut ≥ 300 lève `GristErreur`
+  (403 : message pare-feu ; 413 : bundle trop gros), au lieu de `raise_for_status()` et sa trace brute.
+- « écriture non conforme » lève `GristErreur` (au lieu de `SystemExit`).
