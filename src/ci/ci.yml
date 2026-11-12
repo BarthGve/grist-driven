@@ -1,0 +1,32 @@
+# Posé par grist-driven. Tests Python du projet, et build/tests Node si le projet en a.
+name: CI
+on:
+  push:
+    branches: [main, next, "feature/**"]
+  pull_request:
+    branches: [main, next]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Installer les dépendances Python
+        run: |
+          python -m pip install --upgrade pip pytest
+          [ -f requirements.txt ] && pip install -r requirements.txt || true
+          [ -f packages/grist-kit/pyproject.toml ] && pip install -e packages/grist-kit || true
+      - name: Tests Python
+        run: python -m pytest -q
+      - uses: actions/setup-node@v4
+        if: hashFiles('package.json') != ''
+        with:
+          node-version: "20"
+      - name: Tests et build Node
+        if: hashFiles('package.json') != ''
+        run: |
+          npm ci
+          npm test --if-present
+          npm run build --if-present

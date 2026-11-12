@@ -4,7 +4,7 @@
 #   .grist/templates.orig/   copie des gabarits tels que posés (détecte les modifs locales)
 
 # Couples « dossier source -> dossier cible ». Les gabarits sont traités à part.
-_PAYLOAD_MAP="commands:.claude/commands skills:.claude/skills agents:.claude/agents lib:.grist/lib"
+_PAYLOAD_MAP="commands:.claude/commands skills:.claude/skills agents:.claude/agents lib:.grist/lib hooks:.grist/hooks"
 
 _payload_copier() { mkdir -p "$(dirname "$2")" && cp "$1" "$2"; }
 

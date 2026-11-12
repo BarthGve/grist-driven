@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# grist-driven : hook pre-commit (posé par install.sh dans .git/hooks/).
+# 1. refuse .env et toute clé d'API en clair ; 2. porte du flux (grist-gate.sh) ;
+# 3. pytest -q si des fichiers Python sont indexés.
+set -u
+racine=$(git rev-parse --show-toplevel) || exit 1
+
+# --- 1. secrets -----------------------------------------------------------------
+while IFS= read -r f; do
+  case "$(basename "$f")" in
+    .env) echo "grist-driven : $f est indexé : jamais de .env dans git (git restore --staged $f)." >&2; exit 1;;
+  esac
+done < <(git diff --cached --name-only --diff-filter=ACMR)
+if git diff --cached -U0 --diff-filter=ACMR | grep -Eq "^\+.*GRIST_API_KEY[[:space:]]*=[[:space:]]*[\"']?[A-Za-z0-9_-]"; then
+  echo "grist-driven : une valeur de GRIST_API_KEY est en clair dans l'index : la clé ne va que dans .env." >&2
+  exit 1
+fi
+
+# --- 2. porte du flux -----------------------------------------------------------
+gate="$racine/.grist/hooks/grist-gate.sh"
+if [ -f "$gate" ]; then
+  bash "$gate" pre-commit || exit 1
+else
+  echo "grist-driven : $gate absent, porte du flux ignorée (install.sh update)." >&2
+fi
+
+# --- 3. tests rapides -----------------------------------------------------------
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '\.py$'; then
+  py="$racine/.venv/bin/python"; [ -x "$py" ] || py=$(command -v python3 || true)
+  if [ -n "$py" ] && "$py" -c 'import pytest' 2>/dev/null; then
+    ( cd "$racine" && "$py" -m pytest -q ) || { echo "grist-driven : pytest en échec, commit refusé." >&2; exit 1; }
+  else
+    echo "grist-driven : pytest introuvable, tests rapides ignorés." >&2
+  fi
+fi
+exit 0
