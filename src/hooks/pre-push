@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# grist-driven : hook pre-push (posé par install.sh dans .git/hooks/).
+# Les références poussées arrivent sur l'entrée standard : transmises à la porte du flux.
+racine=$(git rev-parse --show-toplevel) || exit 1
+gate="$racine/.grist/hooks/grist-gate.sh"
+if [ ! -f "$gate" ]; then
+  echo "grist-driven : $gate absent, porte du flux ignorée (install.sh update)." >&2
+  exit 0
+fi
+exec bash "$gate" pre-push "$@"
