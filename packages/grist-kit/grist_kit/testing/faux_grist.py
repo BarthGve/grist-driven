@@ -29,6 +29,17 @@ class ClientFactice:
     def lignes(self, table):
         return [{"id": i, "fields": dict(f)} for i, f in self.records.get(table, {}).items()]
 
+    # --- méthodes de GristClient (même comportement, via _make_request) ---
+    def fetch_table(self, table):
+        return self._make_request("GET", f"/tables/{table}/records").get("records", [])
+
+    def add_record(self, table, data):
+        self.appels.append(("POST", f"/tables/{table}/records", {"records": [{"fields": data}]}))
+        return self.ajouter(table, data)
+
+    def update_record(self, table, record_id, updates):
+        self._make_request("PATCH", f"/tables/{table}/records", {"records": [{"id": record_id, "fields": updates}]})
+
     # --- API ---
     def _make_request(self, methode, endpoint, data=None):
         self.appels.append((methode, endpoint, data))
@@ -63,6 +74,10 @@ class ClientFactice:
         if m and methode == "POST":
             for r in data["records"]:
                 self.ajouter(m.group(1), r["fields"])
+            return {}
+        if m and methode == "PATCH":
+            for r in data["records"]:
+                self.records[m.group(1)][r["id"]].update(r["fields"])
             return {}
         if methode == "POST" and endpoint == "/apply":
             return self._appliquer(data)
