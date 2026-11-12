@@ -162,3 +162,18 @@ La branche `refactor/deployeur-standard` n'a pas de profil ui-kit. Aucun arbitra
 - `construire(widgets_ui, entrees=None)` : nouveau ; `npm ci` puis `node build.mjs [entrées]`, `GristErreur` claire si `node` absent ou < 20, ou `npm` absent ;
   sortie et code d'erreur des commandes cités. Taille lue sur les lignes `<entrée> : N Ko` de `build.mjs`.
 - Non repris : `synchroniser_changelog` (table `CHANGELOG` propre à ce projet ; le journal des versions relève de `versions.py`).
+
+# Écarts (CLI `python -m grist_kit`, tâche 10)
+
+Pas de variante source : la CLI est nouvelle (chaque dépôt avait ses scripts à `argparse` propres). Choix propres à grist-kit :
+
+- `main(argv, racine, client)` : `racine` (défaut : dossier courant) et `client` injectables pour les tests ; sans client, `GristClient(doc_id=--doc ou GRIST_DOC_ID)` après `load_dotenv(<racine>/.env)`. Document absent : message citant `GRIST_DOC_ID`, code 1.
+- Toute `GristErreur`, `ValueError`, `FileNotFoundError` ou `ImportError` devient « Erreur : … » sur stderr et code 1 (jamais de trace).
+- `--dry-run` : `apply-schema`, `maj-formules`, `apply-acl`, `amorcer` le transmettent au module ; `creer-page` affiche seulement le plan ; `deployer` et `inliner` comparent sans écrire (comme `--check`, mais code 0) ; `versions` n'écrit ni la table CHANGELOG ni `CHANGELOG.md`.
+- `deployer` : `dsfr` → `deployer.deployer` sur `<widgets_dir>` ; `ui-kit` → `build_uikit.construire` (sauf `--check`/`--dry-run`, qui ne lancent ni `npm` ni `node`) puis `deployer_uikit`. `widgets.json` est lu à la racine du projet.
+- `inliner` : recopie `core` dans les `*.html` de premier niveau de `widgets_dir` ; sans objet en `ui-kit` (message, code 0).
+- `versions` : le journal est cherché dans `core` puis dans les pages ; `CHANGELOG.md` écrit à la racine, sans libellés de widgets (identifiants).
+- `amorcer` : `<package>.amorcer.executer(client, dry_run)` ; module absent (et seulement lui) = « rien à faire », code 0.
+- `charger_projet` ajoute la racine à `sys.path` et n'importe `<package>.schema` / `.acl_rules` / `.amorcer` qu'à l'usage (propriétés paresseuses) : `inliner` ou un design system refusé n'exigent pas ces modules.
+- `widgets_dir` et `core` sont facultatifs dans `.grist-driven.json` (défauts : `widgets`/`widgets_ui` selon le profil, `widgets/core.js`).
+- `tests/test_testing_helpers.py::test_helpers_n_importent_aucun_module_de_projet` exige `grist-kit` installé (`pip install -e packages/grist-kit`) : sans cela il échoue, indépendamment de cette tâche.
