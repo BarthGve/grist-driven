@@ -79,3 +79,27 @@ Aucune incompatibilité : toutes les variantes sont des sur-ensembles de SP2C, a
 - `--dry-run` sur un document à jour ne signale plus la colonne auto-référente déjà présente (SP2C la listait toujours).
 - Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-schema` (tâche 10).
 - Contrat de `schema_module` : `TABLES` et `colonnes_auto_referentes()` seulement ; `get_table()` de SP2C n'est pas requis.
+
+# Écarts entre variantes (module `apply_acl`)
+
+Comparaison par `diff` de `outils_grist/apply_acl.py` (SP2C, SCIP_grist, ST_parcours-managerial, nanterre-grist-projet,
+ppn_grist, sirpa). portfolio_grist n'a pas d'`apply_acl.py`.
+
+| Variante | Écart avec SP2C |
+|---|---|
+| nanterre-grist-projet, ppn_grist, sirpa | Identiques à SP2C. |
+| ST_parcours-managerial | Regex d'étiquette `[a-z_]+` : le préfixe d'application n'accepte pas de chiffre. |
+| SCIP_grist | Compare aussi le `memo` (une règle insérée décale les suivantes, leur texte doit suivre) ; place les `RemoveRecord` (prune) AVANT les ajouts et mises à jour (une mise à jour peut faire remonter le repli devant une règle obsolète, état que Grist refuse) ; variable `GRIST_DOC_ID_SCIP`. |
+
+## Arbitrage
+
+Aucune incompatibilité : SCIP_grist (la plus récente et la plus complète) est un sur-ensemble de SP2C. Regex de SP2C conservée (chiffres admis, conforme au plan).
+
+- **Retenu** : mise à jour du `memo` et suppressions d'abord (SCIP_grist).
+
+## Changements propres à grist-kit
+
+- `regles_module` paramètre obligatoire (plus de global `acl_rules = None`, plus de repli) ; signature `appliquer(client, regles_module, dry_run=False, prune=False)`.
+- Validation avant tout appel réseau (`valider`) : étiquette manquante ou en double -> `ValueError` claire, rien n'est écrit.
+- Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-acl` (tâche 10).
+- Faux client : aucune extension nécessaire (`/apply` gère déjà `AddRecord`/`UpdateRecord`/`RemoveRecord` sur les tables système ACL).
