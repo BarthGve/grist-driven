@@ -177,3 +177,18 @@ Pas de variante source : la CLI est nouvelle (chaque dépôt avait ses scripts �
 - `charger_projet` ajoute la racine à `sys.path` et n'importe `<package>.schema` / `.acl_rules` / `.amorcer` qu'à l'usage (propriétés paresseuses) : `inliner` ou un design system refusé n'exigent pas ces modules.
 - `widgets_dir` et `core` sont facultatifs dans `.grist-driven.json` (défauts : `widgets`/`widgets_ui` selon le profil, `widgets/core.js`).
 - `tests/test_testing_helpers.py::test_helpers_n_importent_aucun_module_de_projet` exige `grist-kit` installé (`pip install -e packages/grist-kit`) : sans cela il échoue, indépendamment de cette tâche.
+
+# Écarts du gabarit de projet (tâche 14)
+
+- **Profil `ui-kit` : build non lancé.** Aucun `npm ci` ni build Vite dans les tests (pas de réseau, rien d'installé).
+  `tests/test_projet_genere.py` vérifie la structure de `widgets_ui/`, la dépendance `@gouvfr-lasuite/ui-components`,
+  la syntaxe de `build.mjs` (`node --check`) et le message de l'inliner ; le déploiement gzip est couvert par
+  `test_deployer_uikit.py`. À jouer à la main : `cd widgets_ui && npm ci && node build.mjs`.
+- **Versions npm non vérifiées hors ligne** : `@gouvfr-lasuite/ui-components` épinglé à `2.0.0` (reprise de la version
+  du fork utilisé dans `etude_projet_grist`) ainsi que React/Vite de ce projet ; à confirmer au premier vrai `npm ci`.
+- **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/brunogauville/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit`,
+  dépôt et tag supposés (le dépôt n'a pas encore de remote) ; surchargeable (chemin local en test).
+- `"package"` de `.grist-driven.json` : nom Python dérivé du nom de l'application (`Mon App` → `mon_app`), au lieu de
+  la valeur fixe `grist-kit` posée par la tâche 11 (le kit importe `<package>.schema`).
+- Le gabarit ne pose pas `.github/workflows/ci.yml` lui-même : `ci_poser` (tâche 15) s'en charge ; son étape Node
+  accepte désormais l'absence de `package-lock.json`.
