@@ -63,6 +63,7 @@ test_sans_gh_connecte_continue_avec_message() {
 
 test_avec_gh_connecte_lance_la_creation_du_tableau() {
   gf_depot; fake_cmd gh 'exit 0'
+  export GRIST_DRIVEN_PAYLOAD="$FAKE_ROOT/vide"; mkdir -p "$GRIST_DRIVEN_PAYLOAD"   # sinon la vraie lib écrase le stub
   mkdir -p .grist/lib; printf '#!/bin/bash\necho "$@" > appel.txt\n' > .grist/lib/grist-init.sh
   gf_init; assert_rc 0 || return 1
   [ "$(cat appel.txt)" = "run --no-remote --yes" ] || fail "appel : $(cat appel.txt 2>&1)"
