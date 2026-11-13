@@ -20,9 +20,13 @@ config_json() {
 JSON
 }
 
-# .env doit être ignoré AVANT toute écriture de clé (idempotent).
+# .env doit être ignoré AVANT toute écriture de clé (idempotent). Les dossiers générés (venv, caches,
+# dépendances npm) le sont aussi, pour qu'un « git add -A » ne les emporte pas.
 ignorer_env() {
-  grep -qxF '.env' .gitignore 2>/dev/null || printf '.env\n' >> .gitignore
+  local m
+  for m in .env .venv/ __pycache__/ .pytest_cache/ node_modules/; do
+    grep -qxF "$m" .gitignore 2>/dev/null || printf '%s\n' "$m" >> .gitignore
+  done
 }
 
 ecrire_config() { config_json > .grist-driven.json; }

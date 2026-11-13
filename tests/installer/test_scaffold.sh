@@ -10,6 +10,16 @@ test_env_existant_jamais_reecrit() {
   [ "$(cat .env)" = "GRIST_API_KEY=ancienne" ] || fail ".env réécrit : $(cat .env)"
 }
 
+test_gitignore_couvre_les_dossiers_generes() {
+  sc_init; assert_rc 0 || return 1
+  local m
+  for m in .env .venv/ __pycache__/ .pytest_cache/ node_modules/; do
+    grep -qxF "$m" .gitignore || fail "$m non ignoré : $(cat .gitignore)"
+  done
+  sc_init; assert_rc 0 || return 1
+  [ "$(grep -cxF '.venv/' .gitignore)" = 1 ] || fail ".venv/ dupliqué dans .gitignore"
+}
+
 test_env_cree_ignore_par_git_avant_ecriture() {
   GRIST_API_KEY=secretxyz sc_init --doc-id abc123; assert_rc 0 || return 1
   grep -qx '.env' .gitignore || fail ".env non ignoré"

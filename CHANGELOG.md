@@ -1,5 +1,12 @@
 # Journal des modifications
 
+## 0.1.1 - 2026-11-13
+
+### Corrigé
+- Installeur : le `.gitignore` du projet ignore aussi `.venv/`, `__pycache__/`, `.pytest_cache/` et `node_modules/`
+  (avant, seul `.env` l'était : un `git add -A` emportait le venv).
+- Le kit est installé depuis le tag `v0.1.1`.
+
 ## 0.1.0 - 2026-11-13
 
 Première version publique.

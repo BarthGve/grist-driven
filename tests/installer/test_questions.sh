@@ -25,7 +25,7 @@ test_yes_avec_drapeaux_ecrit_grist_driven_json() {
   local j; j=$(cat .grist-driven.json)
   for want in '"app": "demo"' '"package": "demo"' '"design_system": "ui-kit"' \
     '"api_host": "https://grist.numerique.gouv.fr/o/monorg/api"' '"mcp": "coder"' \
-    '"mcp_scope": "user"' '"git_flow": false' '"hooks": false' '"ci": true' '"version": "0.1.0"'; do
+    '"mcp_scope": "user"' '"git_flow": false' '"hooks": false' '"ci": true' "\"version\": \"$(tr -d '[:space:]' < "$REPO/VERSION")\""; do
     case "$j" in *"$want"*) ;; *) fail "json sans $want : $j"; return 1;; esac
   done
   grep -qx '.env' .gitignore || fail ".env non ignoré"
