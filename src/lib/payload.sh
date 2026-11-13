@@ -1,5 +1,5 @@
 # Pose du contenu : commandes, skills, agents, lib, gabarits. Manifeste et baseline.
-# Source : $GRIST_DRIVEN_PAYLOAD (défaut : la racine du repo). Cible : le projet.
+# Source : $GRIST_DRIVEN_PAYLOAD (défaut : src/ du repo). Cible : le projet.
 #   .grist/manifest          une ligne par fichier posé (chemin relatif au projet)
 #   .grist/templates.orig/   copie des gabarits tels que posés (détecte les modifs locales)
 

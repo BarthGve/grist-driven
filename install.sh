@@ -10,7 +10,19 @@
 #   1 (doctor seulement) au moins un contrôle KO.
 set -euo pipefail
 
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)
+
+# Amorçage « curl … | bash » : le script seul n'a pas src/ ; on télécharge l'archive du dépôt dans un
+# dossier temporaire (GRIST_DRIVEN_URL la remplace, ex. file:// en test) et on relance l'installeur complet.
+# ponytail: branche main par défaut, pas de vérification de somme ; épingler un tag via GRIST_DRIVEN_URL.
+if [ ! -f "$ROOT/src/lib/questions.sh" ]; then
+  _tmp=$(mktemp -d "${TMPDIR:-/tmp}/grist-driven.XXXXXX")
+  curl -fsSL "${GRIST_DRIVEN_URL:-https://github.com/brunogauville/grist-driven/archive/refs/heads/main.tar.gz}" \
+    | tar -xz -C "$_tmp" --strip-components=1 \
+    || { printf 'grist-driven : téléchargement impossible (réseau ? GRIST_DRIVEN_URL ?)\n' >&2; exit 3; }
+  exec bash "$_tmp/install.sh" "$@"
+fi
+PAYLOAD_DEFAUT=$ROOT/src
 for f in questions prereqs config payload mcp gitflow scaffold doctor; do . "$ROOT/src/lib/$f.sh"; done
 
 die() { local c=$1; shift; printf 'grist-driven : %s\n' "$*" >&2; exit "$c"; }
@@ -52,7 +64,7 @@ mode_init() {
     info "[dry-run] rien n'est écrit. Seraient écrits : .grist-driven.json, .gitignore (.env)"
     config_json
     info "clé d'API : $([ -n "${GRIST_API_KEY:-}" ] && echo fournie || echo plus tard) (jamais affichée)"
-    payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+    payload_pose "${GRIST_DRIVEN_PAYLOAD:-$PAYLOAD_DEFAUT}" "$PWD"
     gitflow_etape
     scaffold_etape
     return 0
@@ -60,7 +72,7 @@ mode_init() {
   ignorer_env
   ecrire_config
   info "grist-driven : .grist-driven.json écrit (design system : $DESIGN_SYSTEM)."
-  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$PAYLOAD_DEFAUT}" "$PWD"
   mcp_etape
   gitflow_etape
   scaffold_etape
@@ -68,7 +80,7 @@ mode_init() {
 
 mode_update() {
   [ -f .grist-driven.json ] || die 2 "projet non initialisé : lancer d'abord « install.sh init »."
-  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
+  payload_pose "${GRIST_DRIVEN_PAYLOAD:-$PAYLOAD_DEFAUT}" "$PWD"
   mcp_aligner
 }
 mode_doctor()    { doctor_run; }

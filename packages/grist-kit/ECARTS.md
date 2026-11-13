@@ -1,16 +1,16 @@
 # Écarts entre variantes (module `client` et faux client)
 
-Comparaison par `diff` de `outils_grist/grist_client.py` : SP2C, SCIP_grist, ST_parcours-managerial,
-nanterre-grist-projet, sirpa, portfolio_grist.
+Comparaison par `diff` de `outils_grist/grist_client.py` : projet A, projet B, projet C,
+projet D, projet F, projet G.
 
-| Variante | Écart avec SP2C |
+| Variante | Écart avec projet A |
 |---|---|
-| SCIP_grist, ST_parcours-managerial, nanterre-grist-projet, sirpa, portfolio_grist | Identiques à SP2C. |
-| ppn_grist | `_make_request` plus robuste : session persistante, suivi manuel des redirections 301/302/303/307/308 en rejouant la **même** méthode (sinon un POST redirigé devient un GET et l'écriture est ignorée sans erreur), cadence de 0,6 s entre requêtes, deux nouvelles tentatives sur 403 Incapsula, refus d'une méthode HTTP inconnue avant tout appel. |
+| projet B, projet C, projet D, projet F, projet G | Identiques à projet A. |
+| projet E | `_make_request` plus robuste : session persistante, suivi manuel des redirections 301/302/303/307/308 en rejouant la **même** méthode (sinon un POST redirigé devient un GET et l'écriture est ignorée sans erreur), cadence de 0,6 s entre requêtes, deux nouvelles tentatives sur 403 Incapsula, refus d'une méthode HTTP inconnue avant tout appel. |
 
 ## Arbitrage
 
-Comportements compatibles (la variante ppn_grist est un sur-ensemble de SP2C) : la variante ppn_grist est **retenue**, aucun
+Comportements compatibles (la variante projet E est un sur-ensemble de projet A) : la variante projet E est **retenue**, aucun
 arbitrage demandé. `cadence` et `pause_refus` sont des attributs de classe (mise à 0 dans les tests).
 
 ## Changements propres à grist-kit
@@ -23,24 +23,24 @@ arbitrage demandé. `cadence` et `pause_refus` sont des attributs de classe (mis
 
 # Écarts entre variantes (module `inliner`)
 
-Comparaison par `cmp` de `outils_grist/inliner.py` : SP2C, SCIP_grist, ST_parcours-managerial,
-nanterre-grist-projet, ppn_grist, sirpa. Les six fichiers sont **identiques à l'octet près** ;
-`portfolio_grist` n'a pas d'`inliner.py`.
+Comparaison par `cmp` de `outils_grist/inliner.py` : projet A, projet B, projet C,
+projet D, projet E, projet F. Les six fichiers sont **identiques à l'octet près** ;
+`projet G` n'a pas d'`inliner.py`.
 
 ## Changements propres à grist-kit
 
 - Le core et les pages deviennent des paramètres : plus de chemin fixe ni de liste `PAGES` codée en dur
   (la liste nommait des widgets de fiches IA) ; plus de CLI propre au module (la commande `inliner` de
   `python -m grist_kit` viendra à la tâche 10).
-- `inliner_tout(core_path, pages, check)` est tiré de `sp2c/widgets.py` : il lit le core et traite chaque page.
+- `inliner_tout(core_path, pages, check)` est tiré de `projet A/widgets.py` : il lit le core et traite chaque page.
   La génération du `CHANGELOG.md` qu'il faisait n'en fait pas partie (tâche 6).
 - `inliner(page, core, check)` : logique inchangée, y compris le `lambda` de `re.sub` (le core peut contenir des antislashs).
 
 # Écarts entre variantes (module `pages`, ex-`creer_page`)
 
-Comparaison à l'octet (`cmp`) de `outils_grist/creer_page.py` : SP2C, SCIP_grist, ST_parcours-managerial,
-nanterre-grist-projet, sirpa, portfolio_grist, ppn_grist, etude_risques. Les huit sont **identiques** ; aucun arbitrage.
-(`etude_projet_grist` n'a pas ce fichier.)
+Comparaison à l'octet (`cmp`) de `outils_grist/creer_page.py` : projet A, projet B, projet C,
+projet D, projet F, projet G, projet E, projet J. Les huit sont **identiques** ; aucun arbitrage.
+(`projet H` n'a pas ce fichier.)
 
 ## Changements propres à grist-kit
 
@@ -54,48 +54,48 @@ nanterre-grist-projet, sirpa, portfolio_grist, ppn_grist, etude_risques. Les hui
 
 # Écarts entre variantes (module `apply_schema`)
 
-Comparaison par `diff` de `outils_grist/apply_schema.py` (SP2C, SCIP_grist, ST_parcours-managerial, nanterre-grist-projet,
-ppn_grist, sirpa, portfolio_grist) et de `etude_projet_grist/apply_schema.py`.
+Comparaison par `diff` de `outils_grist/apply_schema.py` (projet A, projet B, projet C, projet D,
+projet E, projet F, projet G) et de `projet H/apply_schema.py`.
 
-| Variante | Écart avec SP2C |
+| Variante | Écart avec projet A |
 |---|---|
-| ST_parcours-managerial, nanterre-grist-projet, sirpa | Identiques à SP2C. |
-| SCIP_grist | Réécrit aussi les formules du schéma qui ont changé (clé `formules_mises_a_jour`) ; force `isFormula=False` sur toute colonne de données ajoutée (table existante, seconde passe) ; variable `GRIST_DOC_ID_SCIP`. |
-| portfolio_grist | Comme SCIP_grist, plus `widgetOptions` tiré de `col["options"]` quand il n'y a pas de `choices`. |
-| ppn_grist | Table neuve : colonnes de données d'abord, puis colonnes de formule une à une (le pare-feu refuse parfois, en 403, une table envoyée d'un bloc avec ses formules). |
-| etude_projet_grist | Simple lanceur (51 lignes) : appelle le module de SP2C avec son propre schéma, puis réécrit les formules de déclenchement (`DECLENCHEURS`) en `isFormula=False`, `recalcWhen=0`. |
+| projet C, projet D, projet F | Identiques à projet A. |
+| projet B | Réécrit aussi les formules du schéma qui ont changé (clé `formules_mises_a_jour`) ; force `isFormula=False` sur toute colonne de données ajoutée (table existante, seconde passe) ; variable `GRIST_DOC_ID_SCIP`. |
+| projet G | Comme projet B, plus `widgetOptions` tiré de `col["options"]` quand il n'y a pas de `choices`. |
+| projet E | Table neuve : colonnes de données d'abord, puis colonnes de formule une à une (le pare-feu refuse parfois, en 403, une table envoyée d'un bloc avec ses formules). |
+| projet H | Simple lanceur (51 lignes) : appelle le module de projet A avec son propre schéma, puis réécrit les formules de déclenchement (`DECLENCHEURS`) en `isFormula=False`, `recalcWhen=0`. |
 
 ## Arbitrage
 
-Aucune incompatibilité : toutes les variantes sont des sur-ensembles de SP2C, aucun arbitrage demandé.
+Aucune incompatibilité : toutes les variantes sont des sur-ensembles de projet A, aucun arbitrage demandé.
 
-- **Retenu** : correction `isFormula=False` (SCIP_grist, portfolio_grist) ; `options` (portfolio_grist) ; formules de table neuve une à une (ppn_grist).
-- **Non repris ici** : réécriture des formules existantes (SCIP_grist, portfolio_grist) : c'est le rôle de `maj_formules` (tâche 3 bis), qui évite aussi de changer les clés du rapport (`tables_creees`, `colonnes_ajoutees`, `inchangees`).
-  Les `DECLENCHEURS` d'etude_projet_grist sont couverts par `declenchee: True` dans la définition de colonne (payload `isFormula=False`, `recalcWhen=0` dès la création).
+- **Retenu** : correction `isFormula=False` (projet B, projet G) ; `options` (projet G) ; formules de table neuve une à une (projet E).
+- **Non repris ici** : réécriture des formules existantes (projet B, projet G) : c'est le rôle de `maj_formules` (tâche 3 bis), qui évite aussi de changer les clés du rapport (`tables_creees`, `colonnes_ajoutees`, `inchangees`).
+  Les `DECLENCHEURS` du projet H sont couverts par `declenchee: True` dans la définition de colonne (payload `isFormula=False`, `recalcWhen=0` dès la création).
 
 ## Changements propres à grist-kit
 
 - `schema_module` paramètre obligatoire (plus de global `schema = None`) ; signature `appliquer(client, schema_module, dry_run=False)`.
-- `--dry-run` sur un document à jour ne signale plus la colonne auto-référente déjà présente (SP2C la listait toujours).
+- `--dry-run` sur un document à jour ne signale plus la colonne auto-référente déjà présente (projet A la listait toujours).
 - Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-schema` (tâche 10).
-- Contrat de `schema_module` : `TABLES` et `colonnes_auto_referentes()` seulement ; `get_table()` de SP2C n'est pas requis.
+- Contrat de `schema_module` : `TABLES` et `colonnes_auto_referentes()` seulement ; `get_table()` de projet A n'est pas requis.
 
 # Écarts entre variantes (module `apply_acl`)
 
-Comparaison par `diff` de `outils_grist/apply_acl.py` (SP2C, SCIP_grist, ST_parcours-managerial, nanterre-grist-projet,
-ppn_grist, sirpa). portfolio_grist n'a pas d'`apply_acl.py`.
+Comparaison par `diff` de `outils_grist/apply_acl.py` (projet A, projet B, projet C, projet D,
+projet E, projet F). projet G n'a pas d'`apply_acl.py`.
 
-| Variante | Écart avec SP2C |
+| Variante | Écart avec projet A |
 |---|---|
-| nanterre-grist-projet, ppn_grist, sirpa | Identiques à SP2C. |
-| ST_parcours-managerial | Regex d'étiquette `[a-z_]+` : le préfixe d'application n'accepte pas de chiffre. |
-| SCIP_grist | Compare aussi le `memo` (une règle insérée décale les suivantes, leur texte doit suivre) ; place les `RemoveRecord` (prune) AVANT les ajouts et mises à jour (une mise à jour peut faire remonter le repli devant une règle obsolète, état que Grist refuse) ; variable `GRIST_DOC_ID_SCIP`. |
+| projet D, projet E, projet F | Identiques à projet A. |
+| projet C | Regex d'étiquette `[a-z_]+` : le préfixe d'application n'accepte pas de chiffre. |
+| projet B | Compare aussi le `memo` (une règle insérée décale les suivantes, leur texte doit suivre) ; place les `RemoveRecord` (prune) AVANT les ajouts et mises à jour (une mise à jour peut faire remonter le repli devant une règle obsolète, état que Grist refuse) ; variable `GRIST_DOC_ID_SCIP`. |
 
 ## Arbitrage
 
-Aucune incompatibilité : SCIP_grist (la plus récente et la plus complète) est un sur-ensemble de SP2C. Regex de SP2C conservée (chiffres admis, conforme au plan).
+Aucune incompatibilité : projet B (la plus récente et la plus complète) est un sur-ensemble de projet A. Regex de projet A conservée (chiffres admis, conforme au plan).
 
-- **Retenu** : mise à jour du `memo` et suppressions d'abord (SCIP_grist).
+- **Retenu** : mise à jour du `memo` et suppressions d'abord (projet B).
 
 ## Changements propres à grist-kit
 
@@ -103,19 +103,19 @@ Aucune incompatibilité : SCIP_grist (la plus récente et la plus complète) est
 - Validation avant tout appel réseau (`valider`) : étiquette manquante ou en double -> `ValueError` claire, rien n'est écrit.
 - Pas de `main()` ni de variable `GRIST_DOC_ID_*` : le lanceur est la CLI `python -m grist_kit apply-acl` (tâche 10).
 - Faux client : aucune extension nécessaire (`/apply` gère déjà `AddRecord`/`UpdateRecord`/`RemoveRecord` sur les tables système ACL).
-- Attribut utilisateur : payload complet comparé (`name`, `tableId`, `lookupColId`, `charId`, ressource) ; s'il diffère, `UpdateRecord` (signalé dans `mises_a_jour` en `--dry-run`). SP2C ne comparait que le `name` : un attribut modifié restait périmé.
-- Ressource des règles : `planifier(souhaitees, existantes, id_par_cle)` compare aussi `resource` et replace une règle posée sur une autre ressource ; `valider` exige que la partie ressource de l'étiquette égale `resource_key`. SP2C ne comparait ni l'un ni l'autre.
+- Attribut utilisateur : payload complet comparé (`name`, `tableId`, `lookupColId`, `charId`, ressource) ; s'il diffère, `UpdateRecord` (signalé dans `mises_a_jour` en `--dry-run`). projet A ne comparait que le `name` : un attribut modifié restait périmé.
+- Ressource des règles : `planifier(souhaitees, existantes, id_par_cle)` compare aussi `resource` et replace une règle posée sur une autre ressource ; `valider` exige que la partie ressource de l'étiquette égale `resource_key`. projet A ne comparait ni l'un ni l'autre.
 
 # Écarts entre variantes (module `maj_formules`)
 
-Comparaison par `cmp` de `sp2c/maj_formules.py` : SP2C et ses deux worktrees (`sad-yonath`, `meeting-room-booking-widget`)
-sont **identiques à l'octet près**. `etude_projet_grist` et `instances_DOE_grist` n'ont aucune variante (aucun
+Comparaison par `cmp` de `projet A/maj_formules.py` : projet A et ses deux worktrees (`sad-yonath`, `meeting-room-booking-widget`)
+sont **identiques à l'octet près**. `projet H` et `projet I` n'ont aucune variante (aucun
 `maj_formules.py`).
 
 ## Changements propres à grist-kit
 
 - `schema_module` devient un paramètre **obligatoire** (signature `appliquer(client, schema_module, dry_run=False)`) :
-  plus d'import de `sp2c.schema`, plus de CLI propre au module (la commande `maj-formules` viendra à la tâche 10).
+  plus d'import de `projet A.schema`, plus de CLI propre au module (la commande `maj-formules` viendra à la tâche 10).
 - Clés du rapport alignées sur le plan : `formules` + `choix` fusionnent en `mises_a_jour` ; `inchangees` ajoutée
   (colonnes suivies déjà alignées) ; `divergentes`, `absentes` et `illisibles` conservées.
 - Table ou colonne absente : hors simulation, lève `GristErreur` (message citant les absentes, renvoi vers `apply_schema`)
@@ -124,10 +124,10 @@ sont **identiques à l'octet près**. `etude_projet_grist` et `instances_DOE_gri
 
 # Écarts entre variantes (module `deployer`, profil dsfr)
 
-Comparaison de `outils_grist/deployer.py` : SP2C, SCIP_grist, ppn_grist, sirpa ; `etude_projet_grist`
+Comparaison de `outils_grist/deployer.py` : projet A, projet B, projet E, projet F ; `projet H`
 (branche `refactor/deployeur-standard`, `outils_grist/deployer.py`). Les cinq sont **identiques à l'octet près** ;
-la branche d'etude_projet_grist ajoute `etude_flux/widgets.py`, dont `_verifier_section` est le même contrôle que celui de
-`SP2C/sp2c/widgets.py`. Aucun arbitrage.
+la branche du projet H ajoute `projet H/widgets.py`, dont `_verifier_section` est le même contrôle que celui de
+`projet A/projet A/widgets.py`. Aucun arbitrage.
 
 ## Changements propres à grist-kit
 
@@ -136,7 +136,7 @@ la branche d'etude_projet_grist ajoute `etude_flux/widgets.py`, dont `_verifier_
   (`SessionFactice` en test) ; à défaut, `ouvrir_session(client)`.
 - `_verifier_section` devient `verifier_section(client, config, nom)`, appelée **avant toute écriture** : la table attendue
   vient de `config["widgets"][nom]["table_id"]` (plus de `schema.PAGES_PAR_WIDGET`). Elle refuse aussi si
-  `config["doc_id"]` ≠ `client.doc_id` (ajout par rapport à SP2C). Refus en `ValueError` citant `creer-page` (au lieu de `SystemExit`).
+  `config["doc_id"]` ≠ `client.doc_id` (ajout par rapport à projet A). Refus en `ValueError` citant `creer-page` (au lieu de `SystemExit`).
 - `section_du_widget` lève `ValueError` (au lieu de `SystemExit`) ; sa consigne cite `python -m grist_kit creer-page`.
 - Les réponses de la session HTTP (PATCH et relecture) passent par `_verifie` : tout statut ≥ 300 lève `GristErreur`
   (403 : message pare-feu ; 413 : bundle trop gros), au lieu de `raise_for_status()` et sa trace brute.
@@ -144,7 +144,7 @@ la branche d'etude_projet_grist ajoute `etude_flux/widgets.py`, dont `_verifier_
 
 # Écarts entre variantes (module `build_uikit`, profil ui-kit)
 
-Source : `etude_projet_grist/deployer_widgets.py` (seule variante : `chargeur_gzip` et le dépôt du bundle) et
+Source : `projet H/deployer_widgets.py` (seule variante : `chargeur_gzip` et le dépôt du bundle) et
 `widgets_ui/{build.mjs,package.json,vite.config.ts}` (contrat : `dist/<entrée>.html`, ligne `<entrée> : N Ko` par build).
 La branche `refactor/deployeur-standard` n'a pas de profil ui-kit. Aucun arbitrage.
 
@@ -185,7 +185,7 @@ Pas de variante source : la CLI est nouvelle (chaque dépôt avait ses scripts �
   la syntaxe de `build.mjs` (`node --check`) et le message de l'inliner ; le déploiement gzip est couvert par
   `test_deployer_uikit.py`. À jouer à la main : `cd widgets_ui && npm ci && node build.mjs`.
 - **Versions npm non vérifiées hors ligne** : `@gouvfr-lasuite/ui-components` épinglé à `2.0.0` (reprise de la version
-  du fork utilisé dans `etude_projet_grist`) ainsi que React/Vite de ce projet ; à confirmer au premier vrai `npm ci`.
+  du fork utilisé dans `projet H`) ainsi que React/Vite de ce projet ; à confirmer au premier vrai `npm ci`.
 - **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/brunogauville/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit`,
   dépôt et tag supposés (le dépôt n'a pas encore de remote) ; surchargeable (chemin local en test).
 - `"package"` de `.grist-driven.json` : nom Python dérivé du nom de l'application (`Mon App` → `mon_app`), au lieu de

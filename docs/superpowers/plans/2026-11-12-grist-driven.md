@@ -4,7 +4,7 @@
 
 **Goal :** Livrer `grist-driven` v0.1 : un repo public, installable en une ligne, qui pose dans un projet les commandes `grist-*`, les skills, la bibliothèque `grist-kit`, un gabarit de projet (DSFR ou La Suite ui-kit) et le MCP Grist.
 
-**Architecture :** Trois blocs construits dans l'ordre : (A) `grist-kit`, paquet Python extrait des dépôts SP2C et etude_projet_grist ; (B) `install.sh` et le gabarit de projet ; (C) le contenu repris de driven (commandes, skills, agents, scripts, gabarits), réécrit et renommé `grist-*`.
+**Architecture :** Trois blocs construits dans l'ordre : (A) `grist-kit`, paquet Python extrait des dépôts projet A et projet H ; (B) `install.sh` et le gabarit de projet ; (C) le contenu repris de driven (commandes, skills, agents, scripts, gabarits), réécrit et renommé `grist-*`.
 
 **Tech Stack :** Python ≥ 3.11 (`requests`, `python-dotenv`, `pytest`), bash pur pour l'installeur, Node ≥ 20 seulement pour le profil `ui-kit` (React, Vite, `vite-plugin-singlefile`).
 
@@ -56,7 +56,7 @@ Chacun a son test dans la tâche indiquée.
 
 ## Phase A — `grist-kit`
 
-Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m pytest -q`. Sources à porter (lecture seule) : `~/Developpeur/SP2C/outils_grist/*.py`, `~/Developpeur/SP2C/sp2c/tests/{faux_grist,acl,formules}.py`, `~/Developpeur/etude_projet_grist/{versions,deployer_widgets}.py` et la branche `refactor/deployeur-standard`. Pour chaque module, comparer d'abord les variantes des 9 dépôts par `diff`, consigner les écarts dans `packages/grist-kit/ECARTS.md` ; demander un arbitrage à Bruno seulement si deux comportements sont incompatibles.
+Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m pytest -q`. Sources à porter (lecture seule) : `~/Developpeur/projet A/outils_grist/*.py`, `~/Developpeur/projet A/projet A/tests/{faux_grist,acl,formules}.py`, `~/Developpeur/projet H/{versions,deployer_widgets}.py` et la branche `refactor/deployeur-standard`. Pour chaque module, comparer d'abord les variantes des 9 dépôts par `diff`, consigner les écarts dans `packages/grist-kit/ECARTS.md` ; demander un arbitrage à Bruno seulement si deux comportements sont incompatibles.
 
 ### Tâche 1 : bootstrap du repo, `GristClient`, faux client
 
@@ -70,7 +70,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - [ ] **Étape 1 : `git init`, branche `main`, fichiers racine.** `NOTICE` cite killer-saas (Mike Codeur) et ai-driven-method comme filiation. `LICENSE` : **MIT** (Bruno : « libre de droit » ; interprétation de l'auteur, une licence totalement sans condition type CC0/Unlicense reste possible si Bruno la préfère). Elle ne couvre que le contenu propre au repo ; `NOTICE` rappelle la filiation avec killer-saas et que les fichiers hérités ne sont pas relicensés, d'où la réécriture (tâche 17).
 - [ ] **Étape 2 : écrire les tests** (`test_client.py`) : `test_cle_absente_leve_valueerror`, `test_doc_absent_leve_valueerror`, `test_hote_lu_dans_l_environnement`, `test_requete_403_leve_erreur_lisible` (le message contient « pare-feu » et le code 403, pas de trace brute), `test_fetch_table_via_faux_client`.
 - [ ] **Étape 3 : lancer, constater l'échec** — `python -m pytest -q` → FAIL (module absent).
-- [ ] **Étape 4 : porter `GristClient`** depuis `SP2C/outils_grist/grist_client.py` **sans** les méthodes propres à la génération de user stories (`get_config_projet`, `get_idees_validees`, `idee_has_user_story`, `create_user_story`, `update_idee_statut`) ; traduire les erreurs HTTP 403 en `GristErreur` (sous-classe de `RuntimeError`) au message explicite. Porter `faux_grist.py` tel quel.
+- [ ] **Étape 4 : porter `GristClient`** depuis `projet A/outils_grist/grist_client.py` **sans** les méthodes propres à la génération de user stories (`get_config_projet`, `get_idees_validees`, `idee_has_user_story`, `create_user_story`, `update_idee_statut`) ; traduire les erreurs HTTP 403 en `GristErreur` (sous-classe de `RuntimeError`) au message explicite. Porter `faux_grist.py` tel quel.
 - [ ] **Étape 5 : lancer, constater le succès** — `python -m pytest -q` → tous PASS.
 - [ ] **Étape 6 : commit** — `git add -A && git commit -m "🎉 INIT: grist-kit, client Grist et faux client"`.
 
@@ -82,9 +82,9 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Consomme : `ClientFactice` (tâche 1).
 - Produit : `appliquer(client, schema_module, dry_run: bool=False) -> dict` avec les clés `tables_creees`, `colonnes_ajoutees`, `inchangees` (listes) ; `schema_module` expose `TABLES` (liste ordonnée de tables ; chaque colonne : `id`, `label`, `type`, `formula?`, `declenchee?`, `choices?`) et `colonnes_auto_referentes() -> list`.
 
-- [ ] **Étape 1 : tests** : `test_cree_tables_et_colonnes_manquantes`, `test_deuxieme_passage_ne_change_rien` (idempotence : `tables_creees == []`), `test_dry_run_n_ecrit_rien` (`client.ecritures == []`), `test_colonne_auto_referente_creee_en_deuxieme_passe`, `test_ne_supprime_jamais` (colonne en trop conservée), `test_colonne_de_donnees_ajoutee_a_table_existante_n_est_pas_formule` (`isFormula` faux : piège documenté dans SP2C).
+- [ ] **Étape 1 : tests** : `test_cree_tables_et_colonnes_manquantes`, `test_deuxieme_passage_ne_change_rien` (idempotence : `tables_creees == []`), `test_dry_run_n_ecrit_rien` (`client.ecritures == []`), `test_colonne_auto_referente_creee_en_deuxieme_passe`, `test_ne_supprime_jamais` (colonne en trop conservée), `test_colonne_de_donnees_ajoutee_a_table_existante_n_est_pas_formule` (`isFormula` faux : piège documenté dans projet A).
 - [ ] **Étape 2 : lancer → FAIL.**
-- [ ] **Étape 3 : porter `SP2C/outils_grist/apply_schema.py`** ; `schema_module` devient un paramètre obligatoire (plus de global `schema = None`) ; ajouter la correction de `isFormula` pour les colonnes de données ajoutées à une table existante.
+- [ ] **Étape 3 : porter `projet A/outils_grist/apply_schema.py`** ; `schema_module` devient un paramètre obligatoire (plus de global `schema = None`) ; ajouter la correction de `isFormula` pour les colonnes de données ajoutées à une table existante.
 - [ ] **Étape 4 : lancer → PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: apply_schema idempotent`.
 
@@ -95,9 +95,9 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 **Interfaces :**
 - Produit : `ETIQUETTE` (regex `^\[[a-z0-9_]+:([a-z_]+)#(\d+)\]`) ; `planifier(souhaitees: list[dict], existantes: list[dict]) -> dict` (clés `ajouts`, `mises_a_jour`, `obsoletes`, sans appel réseau) ; `ressource_a_renommer(cle, table_id, existantes, ressources) -> int|None` ; `appliquer(client, regles_module, dry_run=False, prune=False) -> dict` (retourne le plan) ; `regles_module` expose `RESOURCES`, `RULES`, `USER_ATTRIBUTES`.
 
-- [ ] **Étape 1 : tests** : `test_regle_nouvelle_est_ajoutee`, `test_formule_modifiee_met_a_jour_en_place` (pas de doublon), `test_regle_retiree_signalee_pas_supprimee`, `test_prune_supprime_les_obsoletes`, `test_ordre_relatif_force_si_different`, `test_regle_sans_etiquette_refusee` (erreur claire, pas d'ajout), `test_etiquettes_en_double_refusees`, `test_dry_run_n_ecrit_rien`, `test_le_post_apply_envoie_les_actions_a_la_racine` (piège d'API de SP2C).
+- [ ] **Étape 1 : tests** : `test_regle_nouvelle_est_ajoutee`, `test_formule_modifiee_met_a_jour_en_place` (pas de doublon), `test_regle_retiree_signalee_pas_supprimee`, `test_prune_supprime_les_obsoletes`, `test_ordre_relatif_force_si_different`, `test_regle_sans_etiquette_refusee` (erreur claire, pas d'ajout), `test_etiquettes_en_double_refusees`, `test_dry_run_n_ecrit_rien`, `test_le_post_apply_envoie_les_actions_a_la_racine` (piège d'API de projet A).
 - [ ] **Étape 2 : lancer → FAIL.**
-- [ ] **Étape 3 : porter `SP2C/outils_grist/apply_acl.py`** (variante la plus récente après diff des 3) ; `regles_module` obligatoire ; ajouter la validation des étiquettes manquantes ou en double avant tout appel.
+- [ ] **Étape 3 : porter `projet A/outils_grist/apply_acl.py`** (variante la plus récente après diff des 3) ; `regles_module` obligatoire ; ajouter la validation des étiquettes manquantes ou en double avant tout appel.
 - [ ] **Étape 4 : lancer → PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: apply_acl par étiquettes`.
 
@@ -112,7 +112,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `appliquer(client, schema_module, dry_run: bool=False) -> dict` (clés `mises_a_jour`, `divergentes`, `inchangees` ; refuse d'écrire, avec message, si une table ou une colonne du schéma manque dans le document) ; `_options(texte) -> dict` (lecture des `widgetOptions`).
 
 - [ ] **Étape 1 : tests** : `test_formule_modifiee_est_mise_a_jour`, `test_dry_run_liste_sans_ecrire`, `test_table_manquante_refuse_d_ecrire`, `test_colonne_de_donnees_non_formule_est_dite_divergente` (listée, jamais écrasée), `test_choix_alignes_sur_le_schema`, `test_idempotent`.
-- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `SP2C/sp2c/maj_formules.py` (hors de `outils_grist/`) avec `schema_module` obligatoire. **Étape 4 : PASS.**
+- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `projet A/projet A/maj_formules.py` (hors de `outils_grist/`) avec `schema_module` obligatoire. **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: maj_formules`.
 
 ### Tâche 4 : aides de test (simulateur d'ACL, formules en mémoire)
@@ -120,11 +120,11 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 **Fichiers :** Créer `grist_kit/testing/acl.py`, `grist_kit/testing/formules.py`, `tests/test_testing_helpers.py`.
 
 **Interfaces :**
-- Produit : `permis(base, regles_module, email, table, droit, rec=None, apres=None, colonne=None, acces="editors") -> bool` (évalue les règles comme Grist : ressources de la plus précise à la plus générale, première règle qui tranche chaque droit ; `DROITS = "CRUD"`) ; `Base(schema_module, maintenant=…, **tables)` avec `avec(table, id_=None, **valeurs)`, `ligne(table, id_)`, `executer(formule, rec)`, `toutes_les_formules()` ; `Ligne`, `Table` (`all`, `lookupRecords`, `lookupOne`). Le simulateur d'ACL et les formules reçoivent **explicitement** le module de règles et le module de schéma du projet (dans SP2C ils importent `sp2c.acl_rules` et `sp2c.schema` en tête de fichier : ces importations disparaissent).
+- Produit : `permis(base, regles_module, email, table, droit, rec=None, apres=None, colonne=None, acces="editors") -> bool` (évalue les règles comme Grist : ressources de la plus précise à la plus générale, première règle qui tranche chaque droit ; `DROITS = "CRUD"`) ; `Base(schema_module, maintenant=…, **tables)` avec `avec(table, id_=None, **valeurs)`, `ligne(table, id_)`, `executer(formule, rec)`, `toutes_les_formules()` ; `Ligne`, `Table` (`all`, `lookupRecords`, `lookupOne`). Le simulateur d'ACL et les formules reçoivent **explicitement** le module de règles et le module de schéma du projet (dans projet A ils importent `projet A.acl_rules` et `projet A.schema` en tête de fichier : ces importations disparaissent).
 
-- [ ] **Étape 1 : tests** : `test_premiere_regle_qui_tranche_gagne`, `test_ressource_precise_avant_generale`, `test_droit_refuse_par_defaut`, `test_formule_lookuprecords`, `test_formule_now_fige_par_maintenant`, `test_colonne_formule_par_defaut_selon_type`, `test_helpers_n_importent_aucun_module_de_projet` (importer `grist_kit.testing` dans un interpréteur vierge sans `sp2c` ni `schema` en chemin réussit).
+- [ ] **Étape 1 : tests** : `test_premiere_regle_qui_tranche_gagne`, `test_ressource_precise_avant_generale`, `test_droit_refuse_par_defaut`, `test_formule_lookuprecords`, `test_formule_now_fige_par_maintenant`, `test_colonne_formule_par_defaut_selon_type`, `test_helpers_n_importent_aucun_module_de_projet` (importer `grist_kit.testing` dans un interpréteur vierge sans `projet A` ni `schema` en chemin réussit).
 - [ ] **Étape 2 : lancer → FAIL.**
-- [ ] **Étape 3 : porter** `SP2C/sp2c/tests/acl.py` et `formules.py` en ajoutant les paramètres `regles_module` et `schema_module`.
+- [ ] **Étape 3 : porter** `projet A/projet A/tests/acl.py` et `formules.py` en ajoutant les paramètres `regles_module` et `schema_module`.
 - [ ] **Étape 4 : lancer → PASS.**
 - [ ] **Étape 5 : commit** — `✅ TEST: simulateur d'ACL et formules en mémoire`.
 
@@ -136,7 +136,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `MARQUEURS` (regex `/* === CORE BEGIN === */ … /* === CORE END === */`) ; `inliner(page: Path, core: str, check: bool) -> bool` (vrai si à jour) ; `inliner_tout(core_path: Path, pages: list[Path], check: bool) -> bool`.
 
 - [ ] **Étape 1 : tests** : `test_recopie_le_core_entre_marqueurs`, `test_check_ne_modifie_rien_et_renvoie_faux_si_ecart`, `test_marqueurs_absents_renvoie_faux`, `test_core_avec_antislashs_intact` (régression : `re.sub` interprète `\`).
-- [ ] **Étape 2 : lancer → FAIL.** **Étape 3 : porter** `SP2C/outils_grist/inliner.py` en paramétrant core et pages. **Étape 4 : PASS.**
+- [ ] **Étape 2 : lancer → FAIL.** **Étape 3 : porter** `projet A/outils_grist/inliner.py` en paramétrant core et pages. **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: inliner du core JS`.
 
 ### Tâche 6 : journal des versions et `CHANGELOG`
@@ -147,7 +147,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `lire_journal(html_ou_js: str) -> list[dict]` (JSON entre `/* VERSIONS BEGIN */` et `/* VERSIONS END */`, chaque entrée `{version, date, notes:[{texte, widgets}]}`) ; `lignes_changelog(journal) -> list[dict]` (`version`, `date`, `notes`) ; `changelog_md(journal) -> str` ; `synchroniser(client, lignes, dry_run=False) -> list[str]` (versions créées ou mises à jour dans la table `CHANGELOG`, jamais supprimées) ; `notes_du_widget(journal, widget) -> list`.
 
 - [ ] **Étape 1 : tests** : `test_journal_lu_entre_marqueurs`, `test_synchroniser_cree_puis_est_idempotent`, `test_synchroniser_met_a_jour_une_note_modifiee`, `test_jamais_de_suppression`, `test_changelog_md_stable` (deux appels identiques), `test_notes_filtrees_par_widget`.
-- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `etude_projet_grist/versions.py` et `SP2C/sp2c/widgets.py:changelog`. **Étape 4 : PASS.**
+- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `projet H/versions.py` et `projet A/projet A/widgets.py:changelog`. **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: journal des versions et table CHANGELOG`.
 
 ### Tâche 7 : `creer_page`
@@ -158,7 +158,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `creer(client, config: dict, nom: str, table_id: str, titre: str, acces: str="full") -> dict` (entrée de `widgets.json` : `fichier`, `table_ref`, `table_id`, `section_id`, `view_ref`, `acces` ; consigne aussi `config["doc_id"] = client.doc_id` si vide) ; idempotent ; `options_section(acces) -> str` ; `charger_config(chemin) -> dict` et `ecrire_config(chemin, config)`.
 
 - [ ] **Étape 1 : tests** : `test_cree_page_et_section_puis_consigne`, `test_deuxieme_appel_ne_cree_rien`, `test_table_inconnue_message_clair`, `test_acces_invalide_refuse` (hors `read table` / `full`), `test_doc_id_consigne_a_la_premiere_creation`, `test_creer_sur_un_autre_doc_que_celui_de_widgets_json_refuse`.
-- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `SP2C/outils_grist/creer_page.py` (chemins paramétrés, plus de `sys.path`). **Étape 4 : PASS.**
+- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `projet A/outils_grist/creer_page.py` (chemins paramétrés, plus de `sys.path`). **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: création de page de widget`.
 
 ### Tâche 8 : `deployer`, profil `dsfr`
@@ -170,7 +170,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `separer_html_et_js(contenu: str) -> tuple[str, str]` ; `chargeur(js: str) -> str` (JS déposé en base64, contourne le pare-feu) ; `corps_patch(section_id, options, vue, attendu) -> str` ; `ouvrir_session(client)` (GET initial pour les cookies du pare-feu) ; `section_du_widget(config, nom) -> dict` ; `synchroniser_champs(client, table_ref, section_id) -> list[str]` ; `verifier_section(client, config, nom) -> None` (refuse, avec un message qui cite `creer-page`, si le document courant ne porte pas la section de `widgets.json`, si cette section n'est pas liée à la table du widget, si elle n'est pas un widget personnalisé, ou si `config["doc_id"]` ≠ `client.doc_id`) ; `deployer(client, config, nom: str, racine: Path, check: bool=False, session=None) -> int` (0 = à jour/déposé, 1 = écart en mode `check` ; appelle d'abord `verifier_section`).
 
 - [ ] **Étape 1 : tests** : `test_separe_html_et_js`, `test_widget_a_jour_renvoie_0`, `test_ecart_en_check_renvoie_1_sans_ecrire`, `test_depot_relit_et_verifie`, `test_section_absente_message_clair` (cite `creer-page`), `test_section_d_un_autre_widget_refusee` (même id, autre table : aucune écriture), `test_doc_different_de_widgets_json_refuse`, `test_colonne_ajoutee_declaree_dans_la_section`, `test_ecriture_non_conforme_leve_erreur`, `test_refus_403_message_pare_feu` (point de focus 5).
-- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `SP2C/outils_grist/deployer.py` ; la logique de `main()` devient `deployer(...)` ; porter `_verifier_section` de `SP2C/sp2c/widgets.py` en `verifier_section` (sans `schema.PAGES_PAR_WIDGET` : la table attendue vient de `config["widgets"][nom]["table_id"]`). **Étape 4 : PASS.**
+- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `projet A/outils_grist/deployer.py` ; la logique de `main()` devient `deployer(...)` ; porter `_verifier_section` de `projet A/projet A/widgets.py` en `verifier_section` (sans `schema.PAGES_PAR_WIDGET` : la table attendue vient de `config["widgets"][nom]["table_id"]`). **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: déploiement des widgets DSFR`.
 
 ### Tâche 9 : `deployer`, profil `ui-kit` (bundle gzip)
@@ -181,7 +181,7 @@ Dépôt : `packages/grist-kit/` ; tests : `cd packages/grist-kit && python -m py
 - Produit : `chargeur_gzip(js: str) -> str` (gzip niveau 9, `mtime=0`, base64, décompressé par `DecompressionStream` ; sortie stable) ; `construire(widgets_ui: Path, entrees: list[str]|None=None) -> dict[str,int]` (lance `npm ci` puis `node build.mjs`, renvoie la taille en Ko par entrée ; erreur claire si `node` < 20 ou absent) ; `deployer_uikit(client, config, nom, widgets_ui: Path, check=False, session=None) -> int` ; constante `LIMITE_API_OCTETS = 1_000_000`.
 
 - [ ] **Étape 1 : tests** : `test_chargeur_gzip_aller_retour` (décompression Python de la charge == js d'origine), `test_chargeur_gzip_deterministe`, `test_bundle_trop_gros_refuse_avec_message` (au-delà de `LIMITE_API_OCTETS` après compression : message explique 413 et propose de réduire le bundle, point de focus 5), `test_node_absent_message_clair`, `test_check_compare_au_dist`.
-- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `chargeur_gzip` et le dépôt de `etude_projet_grist/deployer_widgets.py` en réutilisant `corps_patch` et `ouvrir_session`. **Étape 4 : PASS.**
+- [ ] **Étape 2 : FAIL.** **Étape 3 : porter** `chargeur_gzip` et le dépôt de `projet H/deployer_widgets.py` en réutilisant `corps_patch` et `ouvrir_session`. **Étape 4 : PASS.**
 - [ ] **Étape 5 : commit** — `✨ FEAT: déploiement des widgets ui-kit (bundle gzip)`.
 
 ### Tâche 10 : CLI `python -m grist_kit` et configuration du projet
@@ -330,7 +330,7 @@ Tests de contenu : `python -m pytest tests/content -q`. Source de lecture : `~/D
 
 **Fichiers :** Créer `src/skills/grist-{schema,acl,widget,deploy,recette,mcp,perf}/SKILL.md`, `src/skills/grist-{agentic-stories,codebase-analysis,quality-bar,stories-review,tdd}/SKILL.md`, `tests/content/test_skills.py`.
 
-**Contenu imposé :** `grist-schema` : `isFormula` des colonnes de données ajoutées à une table existante, renommage de `colId` par `PATCH …/columns`, ids de lignes réutilisés, pas de ligne orpheline ; `grist-acl` : pas de `rec.X.Y`, `newRec` compte la ligne en cours d'insertion (tester l'inconnu qui s'ajoute), lots évalués sur l'état d'avant, colonnes `-R`, étiquette `[<app>:<ressource>#<n>]`, un test par règle y compris le refus ; `grist-widget` : règle en deux endroits, une section par profil (`dsfr` : ordre des feuilles, interdits `style=""`, `innerHTML`, `alert()` ; `ui-kit` : composants, bundle gzip, limite 1 Mo) ; `grist-deploy` : ordre, `--dry-run`, pare-feu 403 (motifs de piratage même dans une donnée), version avant déploiement ; `grist-recette` : essai en réel par profil ; `grist-mcp` : le MCP lit, explore, manipule les données, **jamais la structure** ; `grist-perf` : mesurer avant et après ; widgets (un seul chargement, pagination à 50 lignes, `Intl` et collateurs construits une fois, index `Map` plutôt que `find` dans un tri, saisie différée 250 ms, DSFR en version exacte pour le cache) ; ui-kit (taille du bundle sous `LIMITE_API_OCTETS` après gzip, chargement différé, cache `react-query`) ; formules (`lookupRecords` en colonne sur grosse table, `NOW()` qui recalcule, colonnes calculées inutiles) ; ACL (règles évaluées par ligne, pas de lecture croisée coûteuse) ; API (écritures groupées par `/apply`, lots découpés devant le pare-feu) ; bornes larges dans les tests de performance. Le skill `grist-quality-bar` reprend ces critères pour `grist-review`. Sources des pièges et de la performance : `SCIP_grist/docs/revue-performance-widgets.md`, section « Performance » de `SP2C/CLAUDE.md`, `SP2C/CLAUDE.md`, `SCIP_grist/CLAUDE.md`, `SCIP_grist/docs/pieges.md`, `sirpa/docs/wiki/Pieges-Grist.md`.
+**Contenu imposé :** `grist-schema` : `isFormula` des colonnes de données ajoutées à une table existante, renommage de `colId` par `PATCH …/columns`, ids de lignes réutilisés, pas de ligne orpheline ; `grist-acl` : pas de `rec.X.Y`, `newRec` compte la ligne en cours d'insertion (tester l'inconnu qui s'ajoute), lots évalués sur l'état d'avant, colonnes `-R`, étiquette `[<app>:<ressource>#<n>]`, un test par règle y compris le refus ; `grist-widget` : règle en deux endroits, une section par profil (`dsfr` : ordre des feuilles, interdits `style=""`, `innerHTML`, `alert()` ; `ui-kit` : composants, bundle gzip, limite 1 Mo) ; `grist-deploy` : ordre, `--dry-run`, pare-feu 403 (motifs de piratage même dans une donnée), version avant déploiement ; `grist-recette` : essai en réel par profil ; `grist-mcp` : le MCP lit, explore, manipule les données, **jamais la structure** ; `grist-perf` : mesurer avant et après ; widgets (un seul chargement, pagination à 50 lignes, `Intl` et collateurs construits une fois, index `Map` plutôt que `find` dans un tri, saisie différée 250 ms, DSFR en version exacte pour le cache) ; ui-kit (taille du bundle sous `LIMITE_API_OCTETS` après gzip, chargement différé, cache `react-query`) ; formules (`lookupRecords` en colonne sur grosse table, `NOW()` qui recalcule, colonnes calculées inutiles) ; ACL (règles évaluées par ligne, pas de lecture croisée coûteuse) ; API (écritures groupées par `/apply`, lots découpés devant le pare-feu) ; bornes larges dans les tests de performance. Le skill `grist-quality-bar` reprend ces critères pour `grist-review`. Sources des pièges et de la performance : `projet B/docs/revue-performance-widgets.md`, section « Performance » de `projet A/CLAUDE.md`, `projet A/CLAUDE.md`, `projet B/CLAUDE.md`, `projet B/docs/pieges.md`, `projet F/docs/wiki/Pieges-Grist.md`.
 
 - [ ] **Étape 1 : tests** : `test_frontmatter_name_egal_dossier`, `test_description_commence_par_un_verbe_et_dit_quand_l_utiliser`, `test_chaque_piege_obligatoire_est_cite` (une liste de motifs par skill : `isFormula`, `colId`, `newRec`, `rec\.`, `403`, `aclAsUser_`, `jamais la structure`, et pour `grist-perf` : `Intl`, `Map`, `lookupRecords`, `NOW`, `/apply`, `avant et après`), `test_quality_bar_cite_les_criteres_de_performance`, `test_aucune_reference_a_dm`.
 - [ ] **Étape 2 : FAIL.** **Étape 3 : écrire** les 11 skills (`grist-mcp` ≤ 1 page). **Étape 4 : PASS.**
@@ -354,6 +354,6 @@ Tests de contenu : `python -m pytest tests/content -q`. Source de lecture : `~/D
 
 - [ ] **Étape 1 : test e2e** `test_init_complet.sh` : pour `dsfr` puis `ui-kit`, dans un répertoire vierge, `install.sh init --yes --name demo --design-system <p> --mcp none --no-git-flow --no-hooks --ci` avec `GRIST_KIT_SPEC` local ; vérifier la présence de `.claude/commands/grist-prd.md`, `.grist-driven.json`, `.env.example`, absence de `.env` rempli, puis `install.sh doctor` (client factice) et le `pytest` du projet généré.
 - [ ] **Étape 2 : lancer l'ensemble** — `pytest`, `bash tests/installer/run.sh`, `bash tests/e2e/test_init_complet.sh` → tout PASS.
-- [ ] **Étape 3 : relecture du dépôt** : `grep -rEn "dm-|\.dm/|BarthGve/(SP2C|scip)|[A-Za-z0-9]{22}" .` ne trouve ni reste de driven, ni nom de client, ni identifiant de document (dépôt public).
+- [ ] **Étape 3 : relecture du dépôt** : `grep -rEn "dm-|\.dm/|BarthGve/(…)|[A-Za-z0-9]{22}" .` ne trouve ni reste de driven, ni nom de client, ni identifiant de document (dépôt public).
 - [ ] **Étape 4 : documentation et changelog** : rédiger `README.md` et la section `0.1.0` de `CHANGELOG.md` ; la version reste `0.1.0` (aucun bump).
 - [ ] **Étape 5 : commit** — `🔖 RELEASE: 0.1.0`, puis tag `v0.1.0` (la publication sur GitHub reste à la main de Bruno).

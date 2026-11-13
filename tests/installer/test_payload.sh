@@ -72,3 +72,27 @@ test_init_relance_est_idempotent() {
   [ "$(cat .grist/manifest)" = "$m1" ] || fail "manifeste changé"
   [ "$(grep -cx '.env' .gitignore)" = 1 ] || fail ".env dupliqué dans .gitignore"
 }
+
+# Amorçage « curl … | bash » : install.sh seul, sans src/ ; l'archive vient d'un file:// local.
+test_install_sh_seul_telecharge_l_archive_et_installe() {
+  local arch="$FAKE_ROOT/arch" seul="$FAKE_ROOT/seul"
+  mkdir -p "$arch/depot" "$seul"
+  cp -R "$REPO/install.sh" "$REPO/src" "$REPO/VERSION" "$arch/depot/"
+  tar -czf "$FAKE_ROOT/depot.tar.gz" -C "$arch" depot
+  cp "$REPO/install.sh" "$seul/install.sh"
+  export GRIST_DRIVEN_URL="file://$FAKE_ROOT/depot.tar.gz"
+  OUT=$("$BASH_BIN" "$seul/install.sh" init --yes --name demo \
+    --design-system dsfr --mcp none --no-git-flow --no-hooks --no-ci </dev/null 2>&1); RC=$?
+  assert_rc 0 || return 1
+  assert_file .claude/commands/grist-prd.md || return 1
+  assert_file .grist-driven.json
+}
+
+test_install_sh_seul_sans_reseau_echoue_net() {
+  mkdir -p "$FAKE_ROOT/seul"; cp "$REPO/install.sh" "$FAKE_ROOT/seul/install.sh"
+  export GRIST_DRIVEN_URL="file://$FAKE_ROOT/absent.tar.gz"
+  OUT=$("$BASH_BIN" "$FAKE_ROOT/seul/install.sh" init --yes \
+    --design-system dsfr </dev/null 2>&1); RC=$?
+  assert_rc 3 || return 1
+  assert_out "téléchargement impossible"
+}

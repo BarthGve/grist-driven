@@ -5,8 +5,8 @@ Statut : à valider (v2, après relecture de Bruno) · date : 2026-11-12 · nom 
 ## 1. Intention et pourquoi
 
 Bruno construit plusieurs applications Grist pour différents clients. Neuf dépôts
-(SP2C, SCIP_grist, ST_parcours-managerial, nanterre-grist-projet, ppn_grist, sirpa,
-portfolio_grist, etude_projet_grist, instances_DOE_grist) suivent le même squelette,
+(projet A, projet B, projet C, projet D, projet E, projet F,
+projet G, projet H, projet I) suivent le même squelette,
 mais chacun **recopie à la main** `outils_grist/` (~930 lignes). Les copies divergent
 déjà : `grist_client` en 2 variantes, `apply_acl` en 3, `apply_schema` en 4. Chaque
 `CLAUDE.md` (60 à 310 lignes) répète les mêmes pièges Grist.
@@ -119,7 +119,7 @@ un drapeau équivalent et `--yes` pour tout accepter sans interaction) :
 | `research`, `design`, `plan`, `docs` | par story (branche `feature/<story>`, docs seulement) |
 | `execute`, `review`, `ship` | par ticket (branche `feature/<story>/<ticket>`, un commit, une PR vers `next`) |
 | `release`, `feature`, `continue`, `status`, `help`, `orchestrator` | reprises de driven |
-| **`schema`, `acl`, `widget`, `deploy`, `recette`, `optimise`** | **nouvelles** : écrire/changer le schéma, les ACL, un widget ; déployer ; recetter en réel ; **optimiser** (performance des widgets, formules, ACL et appels d'API ; sources : `SCIP_grist/docs/revue-performance-widgets.md`, règles de performance de `SP2C/CLAUDE.md`) |
+| **`schema`, `acl`, `widget`, `deploy`, `recette`, `optimise`** | **nouvelles** : écrire/changer le schéma, les ACL, un widget ; déployer ; recetter en réel ; **optimiser** (performance des widgets, formules, ACL et appels d'API ; sources : `projet B/docs/revue-performance-widgets.md`, règles de performance de `projet A/CLAUDE.md`) |
 
 Le flux git `main`/`next`, le tableau GitHub, le wiki et le semver de driven sont conservés (choix de l'auteur : Bruno les utilise déjà).
 Les commandes de la ligne « nouvelles » appellent `grist-kit` et portent les règles du §6.4.
@@ -144,13 +144,13 @@ Deux **profils de widgets**, selon le design system choisi :
 - **`dsfr`** : `widgets/` = un HTML d'un seul fichier par widget (DSFR 1.14, version exacte) + `core.js` inliné entre marqueurs ; tests `node:test` du cœur ; aucun Node pour déployer.
 - **`ui-kit`** : `widgets_ui/` = application React/TypeScript construite par Vite (`vite-plugin-singlefile`), une entrée par widget, sortie `dist/<entrée>.html` ;
   les composants viennent de `@gouvfr-lasuite/ui-components`. Le bundle dépasse la limite de l'API Grist (413 vers 1 Mo) : le déployeur le dépose
-  compressé (gzip + base64, décompressé par le navigateur). Modèle : `etude_projet_grist/widgets_ui` et `deployer_widgets.py`.
+  compressé (gzip + base64, décompressé par le navigateur). Modèle : `projet H/widgets_ui` et `deployer_widgets.py`.
 
 ### 6.6 `grist-kit`
 
-Extrait et réconcilié des dépôts. Source de vérité : `SP2C/outils_grist` et `SP2C/sp2c/tests/` (faux Grist, simulateur d'ACL,
-formules) ; `refactor/deployeur-standard` (etude_projet_grist, instances_DOE_grist) pour le déployeur ;
-`etude_projet_grist/versions.py` et `deployer_widgets.py` (journal des versions, chargeur gzip du profil `ui-kit`). Les autres variantes sont comparées par diff,
+Extrait et réconcilié des dépôts. Source de vérité : `projet A/outils_grist` et `projet A/projet A/tests/` (faux Grist, simulateur d'ACL,
+formules) ; `refactor/deployeur-standard` (projet H, projet I) pour le déployeur ;
+`projet H/versions.py` et `deployer_widgets.py` (journal des versions, chargeur gzip du profil `ui-kit`). Les autres variantes sont comparées par diff,
 chaque écart est consigné ; Bruno n'arbitre que si deux comportements sont incompatibles.
 Commandes : `python -m grist_kit apply-schema|maj-formules|apply-acl|amorcer|creer-page|deployer|inliner|versions`, toutes avec `--dry-run`
 et `--doc <id>`, idempotentes. Distribution par tag git (dépôt public, sans jeton, pas de PyPI en v0.1).
@@ -179,7 +179,7 @@ Plate-formes de v0.1 : macOS et Linux, Claude Code.
 Dans le périmètre : `install.sh` (`init`, `update`, `doctor`), `grist-kit`, gabarit de projet, commandes `grist-*` (pipeline
 complet et les cinq nouvelles), skills, agents, lib, hooks et gabarits adaptés, `.mcp.json`, workflow CI, tests du kit et de l'installeur,
 **les deux profils de widgets (DSFR et La Suite ui-kit)**.
-Hors périmètre : Codex et Grok, autres design systems (SCIP), portage des dépôts existants, `lint` de `schema.py`/`acl_rules.py`, déploiement automatique.
+Hors périmètre : Codex et Grok, autres design systems ((un design system tiers)), portage des dépôts existants, `lint` de `schema.py`/`acl_rules.py`, déploiement automatique.
 
 ## 8. Laissé au constructeur
 
@@ -196,7 +196,7 @@ détail du workflow CI ; format du verrou de version.
 - Écritures de structure uniquement par scripts, jamais par le MCP.
 - Flux `main`/`next`, tableau, wiki et semver de driven conservés.
 - Le PRD ne garde que les modes « nouveau projet » et « reprise d'un existant » (`grist-continue`) ; le mode « cloner un SaaS » de driven est retiré.
-- Sources des pièges Grist : `SP2C/CLAUDE.md`, `SCIP_grist/CLAUDE.md` et `docs/pieges.md`, `sirpa/docs/wiki/Pieges-Grist.md`.
+- Sources des pièges Grist : `projet A/CLAUDE.md`, `projet B/CLAUDE.md` et `docs/pieges.md`, `projet F/docs/wiki/Pieges-Grist.md`.
 - Vérifications en réel manuelles (voir 6.8).
 - Installation du MCP : isolée (`pipx`/`uv tool`), jamais sans l'accord de l'utilisateur ; la clé d'API n'est écrite que dans `.env`.
 - Le questionnaire d'installation a des valeurs par défaut, des drapeaux et `--yes` pour automatiser (équipes, CI).

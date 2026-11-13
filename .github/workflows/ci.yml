@@ -1,0 +1,27 @@
+# CI du dépôt grist-driven. Aucun secret, aucun accès à un vrai Grist :
+# le kit est testé sur le faux Grist et le simulateur d'ACL.
+name: CI
+on:
+  push:
+    branches: [main, next, "feature/**"]
+  pull_request:
+    branches: [main, next]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Installer le kit et pytest
+        run: python -m pip install --upgrade pip pytest && pip install -e packages/grist-kit
+      - name: Tests du kit, du contenu et du gabarit
+        run: python -m pytest packages/grist-kit tests -q
+      - name: Tests de l'installeur
+        run: bash tests/installer/run.sh
+      - name: Parcours de bout en bout
+        run: bash tests/e2e/test_init_complet.sh
