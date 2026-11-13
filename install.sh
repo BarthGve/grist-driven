@@ -10,12 +10,15 @@
 #   1 (doctor seulement) au moins un contrôle KO.
 set -euo pipefail
 
-ROOT=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)
+# Jamais de repli sur $0 ni sur le dossier courant : sous « curl … | bash », BASH_SOURCE est vide
+# et un src/ planté dans le projet serait sourcé. Pas de fichier source = on télécharge.
+ROOT=""
+[ -z "${BASH_SOURCE[0]:-}" ] || ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd) || ROOT=""
 
 # Amorçage « curl … | bash » : le script seul n'a pas src/ ; on télécharge l'archive du dépôt dans un
 # dossier temporaire (GRIST_DRIVEN_URL la remplace, ex. file:// en test) et on relance l'installeur complet.
 # ponytail: branche main par défaut, pas de vérification de somme ; épingler un tag via GRIST_DRIVEN_URL.
-if [ ! -f "$ROOT/src/lib/questions.sh" ]; then
+if [ -z "$ROOT" ] || [ ! -f "$ROOT/src/lib/questions.sh" ]; then
   _tmp=$(mktemp -d "${TMPDIR:-/tmp}/grist-driven.XXXXXX")
   curl -fsSL "${GRIST_DRIVEN_URL:-https://github.com/brunogauville/grist-driven/archive/refs/heads/main.tar.gz}" \
     | tar -xz -C "$_tmp" --strip-components=1 \
