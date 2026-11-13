@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## 0.1.2 - 2026-11-13
+
+### Corrigé
+- Profil `ui-kit` : `@gouvfr-lasuite/ui-components` épinglé à `1.5.0` (la `2.0.0` n'existe pas, `npm install` échouait).
+- Profil `ui-kit` : `@types/node` ajouté et `import.meta.dirname` à la place de `__dirname` dans `vite.config.ts`
+  (`npm run build` échouait au typage). Build vérifié : `exemple.html` de 180 Ko, 58 Ko en gzip.
+- Le kit est installé depuis le tag `v0.1.2`.
+
 ## 0.1.1 - 2026-11-13
 
 ### Corrigé

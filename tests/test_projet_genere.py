@@ -76,7 +76,11 @@ def test_uikit_structure_et_build_double(tmp_path):
     _installer(tmp_path, "ui-kit")
     pkg = json.loads((tmp_path / "widgets_ui" / "package.json").read_text())
     assert "@gouvfr-lasuite/ui-components" in pkg["dependencies"]
+    # version vérifiée au registre npm (la 2.0.0, posée à l'origine, n'existe pas) ; réseau interdit ici.
+    assert pkg["dependencies"]["@gouvfr-lasuite/ui-components"] == "1.5.0"
     assert "vite-plugin-singlefile" in pkg["devDependencies"]
+    assert "@types/node" in pkg["devDependencies"]  # vite.config.ts importe node:path
+    assert "__dirname" not in (tmp_path / "widgets_ui" / "vite.config.ts").read_text()  # module ESM
     assert pkg["scripts"]["build"]
     if shutil.which("node"):
         n = subprocess.run(["node", "--check", "build.mjs"], cwd=tmp_path / "widgets_ui", capture_output=True, text=True)

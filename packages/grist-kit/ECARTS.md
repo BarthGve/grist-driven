@@ -180,13 +180,15 @@ Pas de variante source : la CLI est nouvelle (chaque dépôt avait ses scripts �
 
 # Écarts du gabarit de projet (tâche 14)
 
-- **Profil `ui-kit` : build non lancé.** Aucun `npm ci` ni build Vite dans les tests (pas de réseau, rien d'installé).
+- **Profil `ui-kit` : build joué à la main en 0.1.2** (`npm install` puis `npm run build` : `exemple.html` de 180 Ko,
+  58 Ko en gzip). Il a fallu ajouter `@types/node` et remplacer `__dirname` par `import.meta.dirname` dans
+  `vite.config.ts`. Les tests, eux, n'exécutent ni `npm` ni Vite (pas de réseau).
   `tests/test_projet_genere.py` vérifie la structure de `widgets_ui/`, la dépendance `@gouvfr-lasuite/ui-components`,
   la syntaxe de `build.mjs` (`node --check`) et le message de l'inliner ; le déploiement gzip est couvert par
   `test_deployer_uikit.py`. À jouer à la main : `cd widgets_ui && npm ci && node build.mjs`.
-- **Versions npm non vérifiées hors ligne** : `@gouvfr-lasuite/ui-components` épinglé à `2.0.0` (reprise de la version
-  du fork utilisé dans `projet H`) ainsi que React/Vite de ce projet ; à confirmer au premier vrai `npm ci`.
-- **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/BarthGve/grist-driven.git@v0.1.1#subdirectory=packages/grist-kit`,
+- **Versions npm** : `@gouvfr-lasuite/ui-components` épinglé à `1.5.0` (la `2.0.0` posée à l'origine n'existe pas ;
+  vérifié avec `npm view`, 0.1.2). Les autres versions existent au registre ; le build passe avec elles.
+- **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/BarthGve/grist-driven.git@v0.1.2#subdirectory=packages/grist-kit`,
   dépôt et tag supposés (le dépôt n'a pas encore de remote) ; surchargeable (chemin local en test).
 - `"package"` de `.grist-driven.json` : nom Python dérivé du nom de l'application (`Mon App` → `mon_app`), au lieu de
   la valeur fixe `grist-kit` posée par la tâche 11 (le kit importe `<package>.schema`).
