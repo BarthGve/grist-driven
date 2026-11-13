@@ -96,3 +96,12 @@ test_install_sh_seul_sans_reseau_echoue_net() {
   assert_rc 3 || return 1
   assert_out "téléchargement impossible"
 }
+
+# Détournement : sous « curl … | bash » (script lu sur stdin), un src/ planté dans le dossier courant n'est pas sourcé.
+test_pipe_ignore_un_src_plante_dans_le_dossier_courant() {
+  mkdir -p src/lib; echo 'echo PIRATE >&2; exit 99' > src/lib/questions.sh
+  export GRIST_DRIVEN_URL="file://$FAKE_ROOT/absent.tar.gz"
+  OUT=$("$BASH_BIN" < "$INSTALL" 2>&1); RC=$?
+  assert_rc 3 || return 1
+  case "$OUT" in *PIRATE*) fail "src/ du dossier courant sourcé";; esac
+}
