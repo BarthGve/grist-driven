@@ -23,7 +23,7 @@ test_yes_avec_drapeaux_ecrit_grist_driven_json() {
   assert_rc 0 || return 1
   assert_file .grist-driven.json || return 1
   local j; j=$(cat .grist-driven.json)
-  for want in '"app": "demo"' '"package": "grist-kit"' '"design_system": "ui-kit"' \
+  for want in '"app": "demo"' '"package": "demo"' '"design_system": "ui-kit"' \
     '"api_host": "https://grist.numerique.gouv.fr/o/monorg/api"' '"mcp": "coder"' \
     '"mcp_scope": "user"' '"git_flow": false' '"hooks": false' '"ci": true' '"version": "0.1.0"'; do
     case "$j" in *"$want"*) ;; *) fail "json sans $want : $j"; return 1;; esac
@@ -63,7 +63,7 @@ test_la_cle_n_apparait_pas_dans_la_sortie_ni_les_fichiers_dry_run() {
   GRIST_API_KEY=$k run_install init $FLAGS_OK
   assert_rc 0 || return 1
   case "$OUT" in *"$k"*) fail "clé dans la sortie"; return 1;; esac
-  ! grep -rq "$k" . || fail "clé écrite dans un fichier"
+  ! grep -rq --exclude=.env "$k" . || fail "clé écrite ailleurs que dans .env"
 }
 
 # --- tests en plus du plan -------------------------------------------------

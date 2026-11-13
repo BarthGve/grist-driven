@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr" data-fr-scheme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{app}} — exemple</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@1.14.4/dist/dsfr.min.css">
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+</head>
+<body>
+  <main class="fr-container fr-my-2w">
+    <h1 class="fr-h4">Exemples</h1>
+    <p id="vide" class="fr-hint-text" hidden>Aucune ligne à afficher.</p>
+    <div class="fr-table"><table><caption class="fr-sr-only">Liste des exemples</caption>
+      <thead><tr><th scope="col">Titre</th><th scope="col">Statut</th></tr></thead>
+      <tbody id="lignes"></tbody></table></div>
+  </main>
+  <script>
+/* === CORE BEGIN === */
+// Cœur pur du widget : testé par node:test, recopié dans les pages par `python -m grist_kit inliner`.
+function normaliser(texte) {
+  return String(texte || "").trim();
+}
+
+function lignesAffichables(records) {
+  return records
+    .map((r) => ({ id: r.id, titre: normaliser(r.titre), statut: normaliser(r.statut) }))
+    .filter((l) => l.titre !== "")
+    .sort((a, b) => a.titre.localeCompare(b.titre, "fr"));
+}
+
+if (typeof module !== "undefined") module.exports = { normaliser, lignesAffichables };
+/* === CORE END === */
+  </script>
+  <script>
+    function afficher(records) {
+      const lignes = lignesAffichables(records || []);
+      document.getElementById("vide").hidden = lignes.length > 0;
+      const tbody = document.getElementById("lignes");
+      tbody.replaceChildren(...lignes.map((l) => {
+        const tr = document.createElement("tr");
+        for (const v of [l.titre, l.statut]) { const td = document.createElement("td"); td.textContent = v; tr.append(td); }
+        return tr;
+      }));
+    }
+    grist.ready({ requiredAccess: "read table" });
+    grist.onRecords(afficher);
+  </script>
+</body>
+</html>

@@ -8,7 +8,7 @@ config_json() {
 {
   "version": "$(_json "$v")",
   "app": "$(_json "$NAME")",
-  "package": "grist-kit",
+  "package": "$(_json "$(package_de "$NAME")")",
   "design_system": "$DESIGN_SYSTEM",
   "api_host": "$(_json "$API_HOST")",
   "mcp": "$MCP",
