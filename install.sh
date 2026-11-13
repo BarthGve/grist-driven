@@ -20,7 +20,7 @@ ROOT=""
 # ponytail: branche main par défaut, pas de vérification de somme ; épingler un tag via GRIST_DRIVEN_URL.
 if [ -z "$ROOT" ] || [ ! -f "$ROOT/src/lib/questions.sh" ]; then
   _tmp=$(mktemp -d "${TMPDIR:-/tmp}/grist-driven.XXXXXX")
-  curl -fsSL "${GRIST_DRIVEN_URL:-https://github.com/brunogauville/grist-driven/archive/refs/heads/main.tar.gz}" \
+  curl -fsSL "${GRIST_DRIVEN_URL:-https://github.com/BarthGve/grist-driven/archive/refs/heads/main.tar.gz}" \
     | tar -xz -C "$_tmp" --strip-components=1 \
     || { printf 'grist-driven : téléchargement impossible (réseau ? GRIST_DRIVEN_URL ?)\n' >&2; exit 3; }
   exec bash "$_tmp/install.sh" "$@"

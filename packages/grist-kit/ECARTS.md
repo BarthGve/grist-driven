@@ -186,7 +186,7 @@ Pas de variante source : la CLI est nouvelle (chaque dépôt avait ses scripts �
   `test_deployer_uikit.py`. À jouer à la main : `cd widgets_ui && npm ci && node build.mjs`.
 - **Versions npm non vérifiées hors ligne** : `@gouvfr-lasuite/ui-components` épinglé à `2.0.0` (reprise de la version
   du fork utilisé dans `projet H`) ainsi que React/Vite de ce projet ; à confirmer au premier vrai `npm ci`.
-- **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/brunogauville/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit`,
+- **Source du kit** : `GRIST_KIT_SPEC` par défaut = `git+https://github.com/BarthGve/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit`,
   dépôt et tag supposés (le dépôt n'a pas encore de remote) ; surchargeable (chemin local en test).
 - `"package"` de `.grist-driven.json` : nom Python dérivé du nom de l'application (`Mon App` → `mon_app`), au lieu de
   la valeur fixe `grist-kit` posée par la tâche 11 (le kit importe `<package>.schema`).

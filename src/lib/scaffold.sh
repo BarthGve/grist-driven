@@ -3,7 +3,7 @@
 # Substitutions : {{app}}, {{package}}, {{kit_spec}}. Le dossier __package__/ devient le paquet Python.
 
 # ponytail: dépôt et tag supposés (à confirmer à la publication) ; GRIST_KIT_SPEC les surcharge (chemin local en test).
-GRIST_KIT_SPEC_DEFAUT="grist-kit @ git+https://github.com/brunogauville/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit"
+GRIST_KIT_SPEC_DEFAUT="grist-kit @ git+https://github.com/BarthGve/grist-driven.git@v0.1.0#subdirectory=packages/grist-kit"
 
 # Nom de paquet Python : minuscules, chiffres et « _ » ; jamais vide ni commençant par un chiffre.
 package_de() {

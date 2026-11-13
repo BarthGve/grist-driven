@@ -11,7 +11,7 @@ Version 0.1.0 · macOS et Linux · Claude Code seul · licence MIT (filiation da
 À la racine du projet :
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/brunogauville/grist-driven/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/BarthGve/grist-driven/main/install.sh | bash
 ```
 
 Prérequis : `git`, `python3` ≥ 3.11, `curl`, `tar` ; `gh` pour le flux git ; Node ≥ 20 **seulement** pour le design system
