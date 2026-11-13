@@ -92,7 +92,6 @@ def test_construire_lance_npm_ci_puis_build(tmp_path, monkeypatch):
     binaire(bin_, "npm", f'echo "npm $@" >> {journal}\n')
     binaire(bin_, "node", f'if [ "$1" = "--version" ]; then echo v20.11.0; exit 0; fi\n'
                           f'echo "node $@" >> {journal}\n'
-                          'for e in "${@:2}"; do :; done\n'
                           'echo "liste : 42 Ko"\n')
     monkeypatch.setenv("PATH", str(bin_))
     assert build_uikit.construire(tmp_path, ["liste"]) == {"liste": 42}
