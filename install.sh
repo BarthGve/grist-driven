@@ -6,11 +6,12 @@
 #              --git-flow|--no-git-flow --hooks|--no-hooks --ci|--no-ci
 # La clé d'API vient de GRIST_API_KEY (environnement) ou d'une saisie masquée ;
 # jamais d'un drapeau, jamais affichée.
-# Codes de sortie : 0 succès, 2 réponse manquante ou invalide, 3 prérequis manquant.
+# Codes de sortie : 0 succès, 2 réponse manquante ou invalide, 3 prérequis manquant,
+#   1 (doctor seulement) au moins un contrôle KO.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-for f in questions prereqs config payload mcp gitflow scaffold; do . "$ROOT/src/lib/$f.sh"; done
+for f in questions prereqs config payload mcp gitflow scaffold doctor; do . "$ROOT/src/lib/$f.sh"; done
 
 die() { local c=$1; shift; printf 'grist-driven : %s\n' "$*" >&2; exit "$c"; }
 info() { printf '%s\n' "$*"; }
@@ -65,13 +66,12 @@ mode_init() {
   scaffold_etape
 }
 
-# Squelette doctor : remplacé par la tâche 16.
 mode_update() {
   [ -f .grist-driven.json ] || die 2 "projet non initialisé : lancer d'abord « install.sh init »."
   payload_pose "${GRIST_DRIVEN_PAYLOAD:-$ROOT}" "$PWD"
   mcp_aligner
 }
-mode_doctor()    { info "doctor : arrive avec la tâche 16."; }
+mode_doctor()    { doctor_run; }
 mode_uninstall() { hooks_retirer; payload_retire; }
 
 main() { parse_args "$@"; "mode_$MODE"; }
