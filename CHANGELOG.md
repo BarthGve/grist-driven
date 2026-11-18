@@ -1,5 +1,18 @@
 # Journal des modifications
 
+## 0.2.0 - 2026-11-18
+
+### Changé
+- Installeur : deux identifiants de document à la place d'un seul, **preprod** (déployée depuis `next`) et
+  **production** (déployée depuis `main`) : questions 6 et 7, drapeaux `--doc-id-preprod` et `--doc-id-production`,
+  écrits dans `.env` (`GRIST_DOC_ID_PREPROD`, `GRIST_DOC_ID_PRODUCTION`). Vides acceptés (à renseigner plus tard) ;
+  identiques refusés (code 2), comme un document de recette (`--doc-id`, sans question) égal à l'un d'eux.
+- Le gabarit pose `scripts/grist_env.py` (et ses tests) : `python scripts/grist_env.py auto -- <commande>` choisit le
+  document par la branche et refuse une mauvaise branche, un identifiant absent ou partagé, `--doc`, ou une production
+  sans `VERSION` bumpée ni `CHANGELOG.md` à jour. `doctor` contrôle les deux niveaux ; `/grist-deploy` les utilise.
+- Tableau GitHub : le champ **Status** créé par GitHub reçoit nos six statuts (`backlog` … `shipped`) ; plus de
+  second champ « Statut ». Un projet existant qui a les deux champs garde son `.grist/config.json` tel quel.
+
 ## 0.1.2 - 2026-11-13
 
 ### Corrigé

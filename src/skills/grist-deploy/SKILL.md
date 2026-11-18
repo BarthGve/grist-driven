@@ -7,6 +7,8 @@ description: Déployer un projet Grist dans le bon ordre (schéma, formules, ACL
 Toutes les commandes de `grist-kit` sont idempotentes et acceptent `--dry-run` et `--doc <id>`. **Toujours `--dry-run` d'abord**, relire,
 puis appliquer. Le déploiement se fait sur le document réel, jamais depuis le MCP.
 
+**Niveaux.** Recette = `GRIST_DOC_ID` (document jetable, `--doc` permis). Preprod = branche `next`, `GRIST_DOC_ID_PREPROD`. Production = branche `main`, `GRIST_DOC_ID_PRODUCTION`. Sur preprod et production, jamais `--doc` : tout passe par `.venv/bin/python scripts/grist_env.py auto -- <commande>`, qui choisit le document par la branche et refuse une mauvaise branche, un identifiant absent ou partagé, ou une production sans `VERSION` bumpée.
+
 ## Ordre (il compte)
 
 1. `apply-schema` : crée tables et colonnes.

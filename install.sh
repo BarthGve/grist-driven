@@ -2,7 +2,8 @@
 # grist-driven — installeur.
 # Usage : install.sh [init|update|doctor|uninstall] [--yes] [--dry-run] [--force]
 #   réponses : --name --api-host --org --design-system dsfr|ui-kit
-#              --mcp existing|install|coder|none --mcp-scope project|user --doc-id
+#              --mcp existing|install|coder|none --mcp-scope project|user
+#              --doc-id-preprod --doc-id-production (--doc-id : recette, facultatif)
 #              --git-flow|--no-git-flow --hooks|--no-hooks --ci|--no-ci
 # La clé d'API vient de GRIST_API_KEY (environnement) ou d'une saisie masquée ;
 # jamais d'un drapeau, jamais affichée.
@@ -32,7 +33,7 @@ die() { local c=$1; shift; printf 'grist-driven : %s\n' "$*" >&2; exit "$c"; }
 info() { printf '%s\n' "$*"; }
 
 MODE=init YES=false DRY_RUN=false FORCE=false
-NAME="" ORG="" API_HOST="" DESIGN_SYSTEM="" MCP="" MCP_SCOPE="" DOC_ID=""
+NAME="" ORG="" API_HOST="" DESIGN_SYSTEM="" MCP="" MCP_SCOPE="" DOC_ID="" DOC_ID_PREPROD="" DOC_ID_PRODUCTION=""
 GIT_FLOW="" HOOKS="" CI=""
 
 parse_args() {
@@ -45,7 +46,7 @@ parse_args() {
       --git-flow) GIT_FLOW=true;; --no-git-flow) GIT_FLOW=false;;
       --hooks) HOOKS=true;; --no-hooks) HOOKS=false;;
       --ci) CI=true;; --no-ci) CI=false;;
-      --name|--org|--api-host|--design-system|--mcp|--mcp-scope|--doc-id)
+      --name|--org|--api-host|--design-system|--mcp|--mcp-scope|--doc-id|--doc-id-preprod|--doc-id-production)
         if [ -z "$v" ] && [[ "$1" != *=* ]]; then
           [ $# -ge 2 ] || die 2 "$a attend une valeur"; v=$2; shift
         fi
@@ -53,6 +54,7 @@ parse_args() {
           --name) NAME=$v;; --org) ORG=$v;; --api-host) API_HOST=$v;;
           --design-system) DESIGN_SYSTEM=$v;; --mcp) MCP=$v;;
           --mcp-scope) MCP_SCOPE=$v;; --doc-id) DOC_ID=$v;;
+          --doc-id-preprod) DOC_ID_PREPROD=$v;; --doc-id-production) DOC_ID_PRODUCTION=$v;;
         esac;;
       *) die 2 "option inconnue : $a";;
     esac

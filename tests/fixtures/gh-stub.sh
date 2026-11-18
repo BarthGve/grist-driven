@@ -59,6 +59,12 @@ elif "project item-add" in ligne:
         etat["item_add_fail_remaining"] = restant - 1
         fin(1)
     fin(0, "{}")
+elif "api graphql" in ligne and "updateProjectV2Field" in ligne:
+    import re
+    noms = re.findall(r'name:"([^"]+)"', ligne)
+    reponse = {"data": {"updateProjectV2Field": {"projectV2Field": {
+        "id": "FIELD_status0", "options": [{"id": f"opt-{i}", "name": n} for i, n in enumerate(noms)]}}}}
+    fin(0, json.dumps(reponse))
 elif "api graphql" in ligne:
     fin(1 if etat.get("subissue_fail") else 0, "{}")
 elif "issue edit" in ligne:
@@ -78,8 +84,14 @@ elif "project create" in ligne:
 elif "project field-create" in ligne:
     noms = (opt("--single-select-options") or "").split(",")
     fin(0, json.dumps({"id": "FIELD_stub", "options": [{"name": n, "id": f"opt-{i}"} for i, n in enumerate(noms)]}))
-elif "project field-list" in ligne or "project link" in ligne:
-    fin(0, json.dumps({"fields": []}))
+elif "project field-list" in ligne:
+    # projet neuf : GitHub crée seul un champ Status (Todo / In Progress / Done)
+    fin(0, json.dumps({"fields": [
+        {"id": "FIELD_title", "name": "Title", "type": "ProjectV2Field"},
+        {"id": "FIELD_status0", "name": "Status", "type": "ProjectV2SingleSelectField",
+         "options": [{"id": "d1", "name": "Todo"}, {"id": "d2", "name": "In Progress"}, {"id": "d3", "name": "Done"}]}]}))
+elif "project link" in ligne:
+    fin(0, "{}")
 elif "label create" in ligne or "repo create" in ligne or ligne.startswith("api -X"):
     fin(0, "{}")
 elif "api user" in ligne:

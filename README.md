@@ -23,7 +23,7 @@ Autres modes : `install.sh update` (met à jour sans toucher au code du projet n
 `install.sh doctor` (versions, `.env`, accès à l'API, MCP, manifeste ; code 1 si un contrôle échoue),
 `install.sh uninstall`. `--dry-run` montre ce qui serait fait sans rien écrire ; relancer `init` ne casse rien.
 
-## Les huit questions
+## Les neuf questions
 
 Chaque question a un drapeau ; `--yes` accepte les valeurs par défaut (sauf le design system, obligatoire).
 
@@ -34,9 +34,16 @@ Chaque question a un drapeau ; `--yes` accepte les valeurs par défaut (sauf le 
 | 3 | Design system des widgets | `--design-system dsfr\|ui-kit` | **aucun** |
 | 4 | MCP Grist, portée | `--mcp existing\|install\|coder\|none`, `--mcp-scope project\|user` | `install`, `project` |
 | 5 | Clé d'API | variable `GRIST_API_KEY` ou saisie masquée | plus tard |
-| 6 | Document de travail (facultatif) | `--doc-id` | vide |
-| 7 | Flux git `main`/`next` et tableau GitHub | `--git-flow` / `--no-git-flow` | oui |
-| 8 | Hooks git et workflow CI | `--hooks` / `--no-hooks`, `--ci` / `--no-ci` | oui |
+| 6 | Document de preprod (déployé depuis `next`) | `--doc-id-preprod` | vide, à renseigner plus tard |
+| 7 | Document de production (déployé depuis `main`) | `--doc-id-production` | vide, à renseigner plus tard |
+| 8 | Flux git `main`/`next` et tableau GitHub | `--git-flow` / `--no-git-flow` | oui |
+| 9 | Hooks git et workflow CI | `--hooks` / `--no-hooks`, `--ci` / `--no-ci` | oui |
+
+Les deux identifiants vont dans `.env` (`GRIST_DOC_ID_PREPROD`, `GRIST_DOC_ID_PRODUCTION`) et doivent différer ;
+`--doc-id` reste possible pour un document de recette, sans question. Le gabarit pose `scripts/grist_env.py` :
+`python scripts/grist_env.py auto -- <commande>` choisit le document par la branche (`next` = preprod, `main` =
+production) et refuse une mauvaise branche, un identifiant absent ou partagé, ou une production sans `VERSION`
+bumpée ni `CHANGELOG.md` à jour.
 
 La clé n'est jamais passée en argument ni affichée ; elle n'est écrite que dans `.env`, ignoré par git avant
 d'être créé. `.mcp.json` ne contient que `${GRIST_API_KEY}` et `${GRIST_API_HOST}`. Le MCP par défaut,

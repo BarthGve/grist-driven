@@ -1,6 +1,6 @@
 ---
 description: Déployer le projet sur le document Grist réel dans l'ordre exact (schéma, formules, ACL, amorçage, pages, widgets), avec dry-run, version et vérification finale. À lancer après la relecture d'un ticket qui touche Grist ou avant une mise en service ; pas pour fusionner le code (/grist-ship).
-argument-hint: [--doc <identifiant du document>] [widget ...]
+argument-hint: [recette|preprod|production] [widget ...]
 allowed-tools:
   - Read
   - Glob
@@ -12,7 +12,13 @@ allowed-tools:
 ---
 # grist-deploy — Mettre en ligne
 
-Cible : $ARGUMENTS (sans `--doc`, le document de `GRIST_DOC_ID`).
+Cible : $ARGUMENTS. Trois niveaux, un document chacun, jamais le même :
+- **recette** (par défaut hors `next` et `main`) : `GRIST_DOC_ID` du `.env`, commandes `python -m grist_kit …` directes ;
+- **preprod** : branche `next` seulement, document `GRIST_DOC_ID_PREPROD` ;
+- **production** : branche `main` seulement, document `GRIST_DOC_ID_PRODUCTION`, avec `VERSION` bumpée et `CHANGELOG.md` à jour.
+
+Pour preprod et production, chaque commande `python -m grist_kit …` ci-dessous se lance enveloppée :
+`.venv/bin/python scripts/grist_env.py auto -- python -m grist_kit <commande>`. Le script choisit le document par la branche, refuse une mauvaise branche, un identifiant absent ou partagé entre niveaux, et `--doc`. Il n'affiche jamais un identifiant. Accord de l'utilisateur avant d'appliquer sur la production.
 
 Lire le skill `grist-deploy`. Tout passe par `grist-kit`, sur le document réel, jamais par le MCP : il ne touche pas à la structure. Chaque étape est idempotente et se joue d'abord avec `--dry-run`.
 

@@ -38,6 +38,21 @@ demander_bool() {
 
 _dans() { local v=$1; shift; local x; for x in "$@"; do [ "$x" = "$v" ] && return 0; done; return 1; }
 
+# Identifiants de documents : lettres, chiffres, - et _ ; preprod, production et recette distincts.
+_verifier_documents() {
+  local v n
+  for n in DOC_ID DOC_ID_PREPROD DOC_ID_PRODUCTION; do
+    v=${!n}
+    case $v in *[!A-Za-z0-9_-]*) die 2 "identifiant de document invalide pour $n (lettres, chiffres, - et _ seulement)";; esac
+  done
+  if [ -n "$DOC_ID_PREPROD" ] && [ "$DOC_ID_PREPROD" = "$DOC_ID_PRODUCTION" ]; then
+    die 2 "la preprod et la production doivent avoir chacune leur propre document"
+  fi
+  if [ -n "$DOC_ID" ] && { [ "$DOC_ID" = "$DOC_ID_PREPROD" ] || [ "$DOC_ID" = "$DOC_ID_PRODUCTION" ]; }; then
+    die 2 "le document de recette (--doc-id) doit différer de la preprod et de la production"
+  fi
+}
+
 poser_questions() {
   if [ "$YES" != true ]; then
     ouvrir_terminal || die 2 "pas de terminal pour poser les questions : relancer avec --yes et --design-system dsfr|ui-kit"
@@ -59,13 +74,15 @@ poser_questions() {
     printf '5. Clé d API Grist (saisie masquée, vide = plus tard) : ' >&2
     IFS= read -rs GRIST_API_KEY <&3 || GRIST_API_KEY=""; echo >&2
   fi
-  demander DOC_ID "6. Identifiant du document Grist de travail (facultatif)" ""
-  demander_bool GIT_FLOW "7. Flux git main/next et tableau GitHub" true
-  demander_bool HOOKS "8. Hooks git" true
+  demander DOC_ID_PREPROD "6. Identifiant du document Grist de preprod, déployé depuis next (vide = plus tard)" ""
+  demander DOC_ID_PRODUCTION "7. Identifiant du document Grist de production, déployé depuis main (vide = plus tard)" ""
+  demander_bool GIT_FLOW "8. Flux git main/next et tableau GitHub" true
+  demander_bool HOOKS "9. Hooks git" true
   demander_bool CI "   Workflow CI" true
 
   _dans "$DESIGN_SYSTEM" dsfr ui-kit || die 2 "design system invalide « $DESIGN_SYSTEM » : dsfr ou ui-kit"
   _dans "$MCP" existing install coder none || die 2 "--mcp invalide « $MCP » : existing, install, coder ou none"
   _dans "$MCP_SCOPE" project user || die 2 "--mcp-scope invalide « $MCP_SCOPE » : project ou user"
   [ -n "$NAME" ] || die 2 "nom de l'application vide"
+  _verifier_documents
 }

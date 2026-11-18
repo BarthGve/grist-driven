@@ -363,7 +363,11 @@ def test_init_sans_distant_cree_flux_version_et_config(tmp_path, projet):
     cfg = json.loads((neuf / ".grist" / "config.json").read_text())
     assert cfg["owner"] == "acme" and cfg["repo"] == "app" and cfg["project_number"] == 7
     assert set(cfg["status_option_ids"]) == set(STATUTS)
+    # le champ Status de GitHub est réutilisé : pas de second champ « Statut »
+    assert cfg["status_field_id"] == "FIELD_status0"
     appels = [" ".join(a) for a in etat(projet)["appels"]]
+    assert not any("field-create" in a for a in appels)
+    assert any("updateProjectV2Field" in a for a in appels)
     assert not any("repo create" in a or a.startswith("api -X") for a in appels)
     # relancé : la config existante n'est pas réécrite et aucun projet n'est recréé
     avant = (neuf / ".grist" / "config.json").read_text()

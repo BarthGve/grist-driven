@@ -3,7 +3,7 @@
 # Substitutions : {{app}}, {{package}}, {{kit_spec}}. Le dossier __package__/ devient le paquet Python.
 
 # ponytail: dépôt et tag supposés (à confirmer à la publication) ; GRIST_KIT_SPEC les surcharge (chemin local en test).
-GRIST_KIT_SPEC_DEFAUT="grist-kit @ git+https://github.com/BarthGve/grist-driven.git@v0.1.2#subdirectory=packages/grist-kit"
+GRIST_KIT_SPEC_DEFAUT="grist-kit @ git+https://github.com/BarthGve/grist-driven.git@v0.2.0#subdirectory=packages/grist-kit"
 
 # Nom de paquet Python : minuscules, chiffres et « _ » ; jamais vide ni commençant par un chiffre.
 package_de() {
@@ -35,7 +35,8 @@ env_creer() {
   [ -e .env ] && { info "grist-driven : .env existe, jamais réécrit."; return 0; }
   grep -qxF '.env' .gitignore 2>/dev/null || die 2 ".env n'est pas ignoré par git : écriture refusée."
   ( umask 077
-    printf 'GRIST_API_KEY=%s\nGRIST_API_HOST=%s\nGRIST_DOC_ID=%s\n' "${GRIST_API_KEY:-}" "$API_HOST" "$DOC_ID" > .env )
+    printf 'GRIST_API_KEY=%s\nGRIST_API_HOST=%s\nGRIST_DOC_ID=%s\nGRIST_DOC_ID_PREPROD=%s\nGRIST_DOC_ID_PRODUCTION=%s\n' \
+      "${GRIST_API_KEY:-}" "$API_HOST" "$DOC_ID" "$DOC_ID_PREPROD" "$DOC_ID_PRODUCTION" > .env )
   chmod 600 .env
   info "grist-driven : .env créé (droits 600, ignoré par git)."
 }

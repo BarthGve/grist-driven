@@ -73,11 +73,48 @@ test_le_drapeau_cle_api_n_existe_pas() {
 }
 
 test_questionnaire_interactif_lit_le_terminal() {
-  printf '%s\n' "monapp" "monorg" "" "dsfr" "" "" "" "" "n" "n" "n" > "$FAKE_ROOT/rep"
+  printf '%s\n' "monapp" "monorg" "" "dsfr" "" "" "" "docpre" "docprod" "n" "n" "n" > "$FAKE_ROOT/rep"
   GRIST_DRIVEN_TTY="$FAKE_ROOT/rep" run_install init
   assert_rc 0 || return 1
   local j; j=$(cat .grist-driven.json)
   for want in '"app": "monapp"' '"design_system": "dsfr"' '"git_flow": false' '"ci": false'; do
     case "$j" in *"$want"*) ;; *) fail "json sans $want : $j"; return 1;; esac
   done
+  grep -qx 'GRIST_DOC_ID_PREPROD=docpre' .env || fail "preprod absente de .env : $(sed 's/KEY=.*/KEY=x/' .env)"
+  grep -qx 'GRIST_DOC_ID_PRODUCTION=docprod' .env || fail "production absente de .env"
+}
+
+test_les_deux_identifiants_vont_dans_env_par_drapeaux() {
+  run_install init $FLAGS_OK --mcp none --no-git-flow --no-hooks --no-ci --doc-id-preprod pre1 --doc-id-production prod1
+  assert_rc 0 || return 1
+  grep -qx 'GRIST_DOC_ID_PREPROD=pre1' .env || fail "preprod absente de .env"
+  grep -qx 'GRIST_DOC_ID_PRODUCTION=prod1' .env || fail "production absente de .env"
+  grep -q 'GRIST_DOC_ID_PREPROD' .env.example || fail ".env.example sans GRIST_DOC_ID_PREPROD"
+  [ -f scripts/grist_env.py ] || fail "scripts/grist_env.py non posé"
+}
+
+test_identifiants_vides_acceptes_pour_plus_tard() {
+  run_install init $FLAGS_OK --mcp none --no-git-flow --no-hooks --no-ci
+  assert_rc 0 || return 1
+  grep -qx 'GRIST_DOC_ID_PREPROD=' .env || fail "ligne preprod absente"
+  grep -qx 'GRIST_DOC_ID_PRODUCTION=' .env || fail "ligne production absente"
+}
+
+test_preprod_et_production_identiques_refuses() {
+  run_install init $FLAGS_OK --doc-id-preprod meme --doc-id-production meme
+  assert_rc 2 || return 1
+  assert_out "propre document" || return 1
+  [ ! -e .grist-driven.json ] || fail "fichier écrit malgré l'échec"
+}
+
+test_recette_identique_a_la_production_refusee() {
+  run_install init $FLAGS_OK --doc-id rec --doc-id-production rec
+  assert_rc 2 || return 1
+  assert_out "recette" || return 1
+}
+
+test_identifiant_de_document_invalide_refuse() {
+  run_install init $FLAGS_OK --doc-id-preprod 'a/b'
+  assert_rc 2 || return 1
+  assert_out "DOC_ID_PREPROD" || return 1
 }

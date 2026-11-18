@@ -32,6 +32,18 @@ test_tout_ok_code_0() {
   case "$OUT" in *KO*|*"$DOC_KEY"*) fail "KO ou clé dans la sortie : $OUT";; esac
 }
 
+test_doctor_signale_les_deux_niveaux_et_leur_collision() {
+  doc_serveur || return 1; doc_projet
+  printf 'GRIST_DOC_ID_PREPROD=pre1\nGRIST_DOC_ID_PRODUCTION=pre1\n' >> .env
+  run_install doctor; assert_rc 1 || return 1
+  assert_out "OK  GRIST_DOC_ID_PREPROD renseignée" || return 1
+  assert_out "KO  preprod et production visent le même document" || return 1
+  case "$OUT" in *pre1*) fail "identifiant affiché : $OUT";; esac
+  sed -i.bak 's/^GRIST_DOC_ID_PRODUCTION=.*/GRIST_DOC_ID_PRODUCTION=prod1/' .env
+  run_install doctor; assert_rc 0 || return 1
+  assert_out "OK  GRIST_DOC_ID_PRODUCTION renseignée" || return 1
+}
+
 test_cle_absente_ko_sans_afficher_de_valeur() {
   doc_serveur || return 1; doc_projet "" "" ""
   printf 'GRIST_API_KEY=\nGRIST_API_HOST=http://127.0.0.1:%s\nGRIST_DOC_ID=d1\n' "$DOC_PORT" > .env

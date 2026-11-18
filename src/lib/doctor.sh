@@ -29,15 +29,21 @@ _doc_env_vars() {
   for n in GRIST_API_KEY GRIST_API_HOST; do
     if [ -n "$(_doc_env $n)" ]; then _doc_ok "$n renseignée"; else _doc_ko "$n absente ou vide dans .env"; fi
   done
-  if [ -n "$(_doc_env GRIST_DOC_ID)" ]; then _doc_ok "GRIST_DOC_ID renseignée"
-  else _doc_na "GRIST_DOC_ID vide (facultatif)"; fi
+  if [ -n "$(_doc_env GRIST_DOC_ID)" ]; then _doc_ok "GRIST_DOC_ID (recette) renseignée"
+  else _doc_na "GRIST_DOC_ID (recette) vide (facultatif)"; fi
+  local pre prod
+  pre=$(_doc_env GRIST_DOC_ID_PREPROD); prod=$(_doc_env GRIST_DOC_ID_PRODUCTION)
+  if [ -n "$pre" ]; then _doc_ok "GRIST_DOC_ID_PREPROD renseignée"; else _doc_na "GRIST_DOC_ID_PREPROD vide (à renseigner avant de déployer depuis next)"; fi
+  if [ -n "$prod" ]; then _doc_ok "GRIST_DOC_ID_PRODUCTION renseignée"; else _doc_na "GRIST_DOC_ID_PRODUCTION vide (à renseigner avant de déployer depuis main)"; fi
+  if [ -n "$pre" ] && [ "$pre" = "$prod" ]; then _doc_ko "preprod et production visent le même document : un niveau, un document"; fi
 }
 
 # GET /docs/<id>/tables ; la clé passe par stdin de curl (ni argument, ni sortie).
 _doc_api() {
   local host key doc code
   host=$(_doc_env GRIST_API_HOST); key=$(_doc_env GRIST_API_KEY); doc=$(_doc_env GRIST_DOC_ID)
-  [ -n "$doc" ] || { _doc_na "API Grist ignorée : pas de document (GRIST_DOC_ID)"; return 0; }
+  [ -n "$doc" ] || doc=$(_doc_env GRIST_DOC_ID_PREPROD)
+  [ -n "$doc" ] || { _doc_na "API Grist ignorée : aucun document (GRIST_DOC_ID ni GRIST_DOC_ID_PREPROD)"; return 0; }
   [ -n "$host" ] && [ -n "$key" ] || { _doc_ko "API Grist non testée : adresse ou clé manquante"; return 0; }
   case $host in http://*|https://*) ;; *) _doc_ko "GRIST_API_HOST doit commencer par http:// ou https://"; return 0;; esac
   case $doc in *[!A-Za-z0-9_-]*) _doc_ko "GRIST_DOC_ID invalide (lettres, chiffres, - et _ seulement)"; return 0;; esac

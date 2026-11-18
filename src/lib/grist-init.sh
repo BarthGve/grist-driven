@@ -10,7 +10,7 @@ set -euo pipefail
 
 OUI=0 PUBLIC=0 DISTANT=1 OWNER="" REPO="" TITRE="grist-driven"
 STATUTS="backlog,ready,in progress,review,test,shipped"
-CHAMP="Statut" # distinct du champ « Status » que GitHub crée par défaut dans un projet
+CHAMP="Status" # le champ que GitHub crée par défaut dans un projet : on y met nos six statuts, pas de second champ
 
 die() { echo "grist-init : $*" >&2; exit 1; }
 alerte() { echo "grist-init : ALERTE : $*" >&2; }
@@ -104,6 +104,23 @@ configurer_distant() {
   proteger next
 }
 
+# Remplace les options du champ Status par nos six statuts (GraphQL : la CLI ne sait pas le faire) ;
+# renvoie {"id", "options": [{"id","name"}]} d'après la réponse, donc avec les nouveaux identifiants.
+remplacer_options() { # <identifiant du champ>
+  local couleurs=(GRAY BLUE GREEN YELLOW ORANGE PURPLE) opts="" n i=0 rep
+  while IFS= read -r n; do
+    opts+="{name:\"$n\",color:${couleurs[$((i % 6))]},description:\"\"},"; i=$((i + 1))
+  done < <(printf '%s\n' "$STATUTS" | tr ',' '\n')
+  rep="$(gh api graphql -f query="mutation { updateProjectV2Field(input:{fieldId:\"$1\", singleSelectOptions:[${opts%,}]}) { projectV2Field { ... on ProjectV2SingleSelectField { id options { id name } } } } }")" \
+    || return 1
+  python3 -c '
+import json, sys
+c = json.loads(sys.argv[1])["data"]["updateProjectV2Field"]["projectV2Field"]
+assert c.get("id") and c.get("options"), "réponse sans champ"
+print(json.dumps(c))
+' "$rep"
+}
+
 # --- tableau et .grist/config.json --------------------------------------------------------------------------
 creer_tableau() {
   if [ -f .grist/config.json ]; then
@@ -111,14 +128,24 @@ creer_tableau() {
     return 0
   fi
   confirmer "Créer le projet GitHub « $TITRE » et son tableau de statuts ?"
-  local projet numero champ liste
+  local projet numero champ liste fid
   projet="$(gh project create --owner "$OWNER" --title "$TITRE" --format json)"
   numero="$(python3 -c 'import json,sys; p=json.loads(sys.argv[1]); assert p.get("id"); print(p["number"])' "$projet")" \
     || die "réponse de gh illisible : projet sans identifiant"
-  champ="$(gh project field-create "$numero" --owner "$OWNER" --name "$CHAMP" --data-type SINGLE_SELECT \
-    --single-select-options "$STATUTS" --format json)"
   gh project link "$numero" --owner "$OWNER" --repo "$REPO" >/dev/null 2>&1 || true
   liste="$(gh project field-list "$numero" --owner "$OWNER" --format json)"
+  fid="$(python3 -c '
+import json, sys
+for f in json.loads(sys.argv[1]).get("fields", []):
+    if f.get("name") == sys.argv[2] and f.get("options") is not None:
+        print(f["id"]); break
+' "$liste" "$CHAMP")"
+  if [ -n "$fid" ]; then
+    champ="$(remplacer_options "$fid")" || die "options du champ « $CHAMP » non remplacées"
+  else  # projet sans champ Status (peu probable) : on le crée
+    champ="$(gh project field-create "$numero" --owner "$OWNER" --name "$CHAMP" --data-type SINGLE_SELECT \
+      --single-select-options "$STATUTS" --format json)"
+  fi
 
   mkdir -p .grist
   python3 - "$OWNER" "$REPO" "$projet" "$champ" "$liste" "$STATUTS" >.grist/config.json.tmp <<'PY' \
