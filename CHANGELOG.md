@@ -1,5 +1,20 @@
 # Journal des modifications
 
+## 0.2.1 - 2026-11-20
+
+### Corrigé
+- Simulateur d'ACL (`grist_kit.testing.acl`) : une permission mixte comme `+R-CUD` est lue groupe par groupe
+  (R accordé, C/U/D refusés) ; avant, C/U/D étaient accordés à tort. `+CR-UD`, `-CUD+R`, `all` et `none` suivent.
+
+### Ajouté
+- Droit de modifier la structure : règle spéciale Grist `SchemaEdit`. Déclarer la ressource
+  `{"key": "schema", "tableId": "*SPECIAL", "colIds": "SchemaEdit"}` et des règles `+S` / `-S`
+  (ex. `+S` si `user.Access == "owners"`, puis `-S` pour tous) ; `apply_acl` l'écrit comme toute règle (idempotent).
+  `permis(base, regles, email, "*SPECIAL", "S", acces=...)` l'évalue ; sans règle, propriétaires et éditeurs
+  peuvent, comme dans Grist.
+
+## 0.2.1 - 2026-11-20
+
 ## 0.2.0 - 2026-11-18
 
 ### Changé
