@@ -1,6 +1,6 @@
 # Journal des modifications
 
-## À publier
+## 0.2.1 - 2026-11-21
 
 ### Changé
 - GitHub : tout passe par l'API REST (`gh api`), plus par GraphQL, dont le quota (partagé entre sessions) s'épuisait.
