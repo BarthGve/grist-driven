@@ -11,7 +11,7 @@ allowed-tools:
 ---
 # grist-continue — Reprendre un projet en cours
 
-Le projet fonctionne déjà, sa documentation n'existe pas. Le seul livrable est `docs/onboarding.md`. Bash ne sert qu'à des lectures (`git log`, `git ls-files`, `gh issue list`) et au commit final : ni écriture sur le tableau, ni appel d'écriture à `gh`, ni écriture sur un document Grist.
+Le projet fonctionne déjà, sa documentation n'existe pas. Le seul livrable est `docs/onboarding.md`. Bash ne sert qu'à des lectures (`git log`, `git ls-files`, `gh api` en GET) et au commit final : ni écriture sur le tableau, ni appel d'écriture à `gh api`, ni écriture sur un document Grist.
 
 ## Prérequis
 - Des fichiers source hors de `docs/` et plus d'un commit dans l'historique. Sinon : « Dépôt vide : /grist-prd. »
@@ -25,7 +25,7 @@ Le projet fonctionne déjà, sa documentation n'existe pas. Le seul livrable est
 ## Relever l'état réel (lecture seule)
 1. Ce que l'application fait pour ses utilisateurs : écrans, widgets, tables qu'ils manipulent, flux principaux. La question est « que fait-elle », pas « comment est-elle construite ».
 2. L'historique (`git log --oneline`) : ce qui est livré et quand.
-3. Si `gh auth status` réussit, les issues ouvertes et fermées (`gh issue list --state open|closed`). Sinon, avertir clairement, sauter la correspondance et écrire quand même l'état des lieux : l'absence de tableau ne bloque jamais la documentation.
+3. Si `gh auth status` réussit, les issues ouvertes et fermées (`gh api --paginate "repos/{owner}/{repo}/issues?state=all"`, sans les éléments qui portent `pull_request`). Sinon, avertir clairement, sauter la correspondance et écrire quand même l'état des lieux : l'absence de tableau ne bloque jamais la documentation.
 
 ## À confirmer (une question à la fois)
 Le résumé du produit en une phrase ; les flux que l'utilisateur tient pour déjà livrés ; pour chaque issue ouverte, un identifiant proposé `s<NN>-<slug>` à confirmer, amender ou exclure. Les réponses sont consignées, rien n'est appliqué.

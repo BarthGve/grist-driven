@@ -17,17 +17,17 @@ Lancer une fois `bash .grist/lib/grist-board.sh status-all` et garder, parmi les
 Demander : majeure, **mineure** (par défaut) ou correctif.
 
 ## 3. Bump sur `next`, une seule fois par version
-Si `VERSION` diffère déjà de celui de `origin/main` **et** qu'une PR `next` vers `main` est ouverte (`gh pr list --base main --head next --state open`), s'arrêter : « Livraison déjà en vol, ne pas incrémenter une seconde fois : fusionner cette PR. » Sinon :
+Si `VERSION` diffère déjà de celui de `origin/main` **et** qu'une PR `next` vers `main` est ouverte (`gh api "repos/{owner}/{repo}/pulls?base=main&head={owner}:next&state=open" --jq length`, non nul), s'arrêter : « Livraison déjà en vol, ne pas incrémenter une seconde fois : fusionner cette PR. » Sinon :
 ```bash
 bash .grist/lib/grist-version.sh bump <major|minor|patch>
 ```
 Le script réécrit `VERSION`, aligne `pyproject.toml` et `package.json` s'ils existent et ouvre la section du `CHANGELOG.md`. Commiter ces fichiers sur `next` (`🔧 CHORE: version <x.y.z>`) et pousser. Le hook de poussée vers `main` refuse une version inchangée ou absente du `CHANGELOG.md` : le bump vient donc avant la PR.
 
 ## 4. PR vers `main`
-`gh pr create --base main --head next --title "Version <x.y.z>"`, avec en description les stories livrées. Ne pas fusionner sans accord explicite : par défaut on s'arrête à la PR ouverte. Elle se fusionne en **squash** : une version égale un commit sur `main`, jamais de merge de `next`.
+`gh api -X POST repos/{owner}/{repo}/pulls -f base=main -f head=next -f title="Version <x.y.z>" -f body="<stories livrées>"` (REST, jamais `gh pr create`), avec en description les stories livrées. Ne pas fusionner sans accord explicite : par défaut on s'arrête à la PR ouverte. Elle se fusionne en **squash** : une version égale un commit sur `main`, jamais de merge de `next`.
 
 ## 5. Après fusion prouvée seulement
-La preuve est `gh pr view <url> --json state --jq .state` égal à `MERGED`. Alors :
+La preuve est `gh api repos/{owner}/{repo}/pulls/<n> --jq .merged` égal à `true`. Alors :
 1. Récupérer `origin/main` et poser le tag `v<x.y.z>` sur **ce** commit (celui du squash sur `main`, jamais un commit de `next`), puis pousser le tag.
 2. Wiki, une page par story livrée : `bash .grist/lib/grist-wiki.sh publish "$(pwd)" "$(cat VERSION)" <story>...`
 3. Tableau : `status-set <story> shipped` pour chaque story livrée, puis le même pour chacun de ses tickets (`<story>/<ticket>`).

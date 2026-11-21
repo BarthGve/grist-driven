@@ -31,12 +31,56 @@ def numero_suivant():
     return max([i["number"] for i in etat.get("issues", [])] + [0]) + 1
 
 
-if "issue list" in ligne:
+def champs_f():
+    """Paires -f/-F clé=valeur ; « @fichier » est lu comme gh le fait."""
+    out = {}
+    for i, a in enumerate(args):
+        if a in ("-f", "-F") and i + 1 < len(args) and "=" in args[i + 1]:
+            k, v = args[i + 1].split("=", 1)
+            out[k] = open(v[1:]).read() if v.startswith("@") else v
+    return out
+
+
+def corps_stdin():
+    return json.load(sys.stdin) if "--input" in args else {}
+
+
+def issue_par_numero(n):
+    return next((i for i in etat.get("issues", []) if str(i["number"]) == str(n)), None)
+
+
+route = next((a for a in args[1:] if "/" in a and not a.startswith("-")), "") if args[:1] == ["api"] else ""
+route = route.split("?")[0]
+methode = opt("-X") or "GET"
+
+if args[:2] == ["api", "user"]:
+    fin(0, "acme")
+elif args[:1] == ["api"] and len(args) >= 2 and args[1].startswith("users/") and "/" not in args[1][6:]:
+    fin(0, json.dumps({"login": args[1][6:], "type": "User"}))
+elif route.endswith("/projectsV2/1/fields") or route.endswith("/projectsV2/7/fields"):
+    fin(0, json.dumps([
+        {"id": 1, "name": "Title", "data_type": "title"},
+        {"id": 2, "name": "Status", "data_type": "single_select", "node_id": "FIELD_status0",
+         "options": [{"id": "d1", "name": {"raw": "Todo"}}, {"id": "d2", "name": {"raw": "In Progress"}},
+                     {"id": "d3", "name": {"raw": "Done"}}]}]))
+elif route.endswith("/issues") and methode == "GET":
     etat["list_calls"] = etat.get("list_calls", 0) + 1
-    champs = ("title", "number", "id", "projectItems")
-    fin(0, json.dumps([{k: i.get(k, []) for k in champs} for i in etat.get("issues", [])]))
-elif "project item-edit" in ligne:
-    cible, option = opt("--id"), opt("--single-select-option-id")
+    fin(0, json.dumps([{"title": i.get("title", ""), "number": i["number"], "id": i["id"]}
+                       for i in etat.get("issues", [])]
+                      + etat.get("pulls_dans_issues", [])))
+elif "/items" in route and methode == "GET":
+    noms = {v: k for k, v in etat.get("status_option_ids", {}).items()}
+    liste = []
+    for i in etat.get("issues", []):
+        for item in i.get("projectItems", []):
+            st = item.get("status") or {}
+            valeur = {"id": st.get("optionId"), "name": {"raw": st.get("name", "")}} if st.get("name") else None
+            liste.append({"id": item["id"], "content_type": "Issue", "content": {"number": i["number"], "id": i["id"]},
+                          "fields": [{"id": 2, "name": "Status", "data_type": "single_select", "value": valeur}]})
+    fin(0, json.dumps(liste))
+elif "/items/" in route and methode == "PATCH":
+    cible = route.rsplit("/", 1)[1]
+    option = corps_stdin()["fields"][0]["value"]
     etat.setdefault("edits", []).append({"id": cible, "option": option})
     noms = {v: k for k, v in etat.get("status_option_ids", {}).items()}
     for issue in etat.get("issues", []):
@@ -44,20 +88,47 @@ elif "project item-edit" in ligne:
             if item["id"] == cible and option in noms:
                 item["status"] = {"optionId": option, "name": noms[option]}
     fin(0, "{}")
-elif "issue create" in ligne:
-    n = numero_suivant()
-    corps = open(opt("-F", "--body-file")).read() if opt("-F", "--body-file") else ""
-    etat.setdefault("issues", []).append({
-        "title": opt("-t", "--title") or "", "number": n, "id": f"I_{n}", "body": corps, "labels": [],
-        "projectItems": [{"id": f"PVTI_{n}", "status": {"optionId": "opt1", "name": "backlog"}}],
-    })
-    fin(0, f"https://github.com/{opt('-R') or 'acme/app'}/issues/{n}")
-elif "project item-add" in ligne:
+elif route.endswith("/items") and methode == "POST":
+    corps = corps_stdin()
     etat["item_add_calls"] = etat.get("item_add_calls", 0) + 1
     restant = etat.get("item_add_fail_remaining", 0)
     if restant > 0:
         etat["item_add_fail_remaining"] = restant - 1
         fin(1)
+    cible = issue_par_numero(corps.get("number"))
+    if cible is not None and not cible.get("projectItems"):
+        cible["projectItems"] = [{"id": f"PVTI_{cible['number']}", "status": {"optionId": "opt1", "name": "backlog"}}]
+    fin(0, "{}")
+elif route.endswith("/issues") and methode == "POST":
+    n = numero_suivant()
+    c = champs_f()
+    etat.setdefault("issues", []).append({
+        "title": c.get("title", ""), "number": n, "id": f"I_{n}", "body": c.get("body", ""), "labels": [],
+        # le faux projet « auto-ajoute » : sans cela l'issue ne serait pas sur le tableau avant item-add
+        "projectItems": [],
+    })
+    fin(0, json.dumps({"html_url": f"https://github.com/acme/app/issues/{n}", "number": n}))
+elif "/issues/" in route and route.endswith("/sub_issues") and methode == "POST":
+    fin(1 if etat.get("subissue_fail") else 0, "{}")
+elif "/issues/" in route and route.endswith("/labels") and methode == "POST":
+    issue = issue_par_numero(route.split("/issues/")[1].split("/")[0])
+    etiquette = champs_f().get("labels[]")
+    if issue is None:
+        fin(1)
+    if etiquette and etiquette not in issue["labels"]:
+        issue["labels"].append(etiquette)
+    fin(0, "{}")
+elif "/issues/" in route and methode == "PATCH":
+    issue = issue_par_numero(route.rsplit("/", 1)[1])
+    if issue is None:
+        fin(1)
+    c = champs_f()
+    if "body" in c:
+        issue["body"] = c["body"]
+    if "title" in c:
+        issue["title"] = c["title"]
+    fin(0, "{}")
+elif route.endswith("/labels") and methode == "POST":
     fin(0, "{}")
 elif "api graphql" in ligne and "updateProjectV2Field" in ligne:
     import re
@@ -65,37 +136,12 @@ elif "api graphql" in ligne and "updateProjectV2Field" in ligne:
     reponse = {"data": {"updateProjectV2Field": {"projectV2Field": {
         "id": "FIELD_status0", "options": [{"id": f"opt-{i}", "name": n} for i, n in enumerate(noms)]}}}}
     fin(0, json.dumps(reponse))
-elif "api graphql" in ligne:
-    fin(1 if etat.get("subissue_fail") else 0, "{}")
-elif "issue edit" in ligne:
-    num = next((a for a in args if a.isdigit()), None)
-    issue = next((i for i in etat.get("issues", []) if str(i["number"]) == num), None)
-    if issue is None:
-        fin(1)
-    if opt("--body-file"):
-        issue["body"] = open(opt("--body-file")).read()
-    if opt("--title"):
-        issue["title"] = opt("--title")
-    if opt("--add-label") and opt("--add-label") not in issue["labels"]:
-        issue["labels"].append(opt("--add-label"))
-    fin(0, "{}")
 elif "project create" in ligne:
     fin(0, json.dumps({"id": "PVT_stub", "number": 7}))
-elif "project field-create" in ligne:
-    noms = (opt("--single-select-options") or "").split(",")
-    fin(0, json.dumps({"id": "FIELD_stub", "options": [{"name": n, "id": f"opt-{i}"} for i, n in enumerate(noms)]}))
-elif "project field-list" in ligne:
-    # projet neuf : GitHub crée seul un champ Status (Todo / In Progress / Done)
-    fin(0, json.dumps({"fields": [
-        {"id": "FIELD_title", "name": "Title", "type": "ProjectV2Field"},
-        {"id": "FIELD_status0", "name": "Status", "type": "ProjectV2SingleSelectField",
-         "options": [{"id": "d1", "name": "Todo"}, {"id": "d2", "name": "In Progress"}, {"id": "d3", "name": "Done"}]}]}))
 elif "project link" in ligne:
     fin(0, "{}")
-elif "label create" in ligne or "repo create" in ligne or ligne.startswith("api -X"):
+elif ligne.startswith("api -X"):
     fin(0, "{}")
-elif "api user" in ligne:
-    fin(0, "acme")
 elif "auth token" in ligne or "auth setup-git" in ligne:
     fin(0, "jeton-factice")
 else:

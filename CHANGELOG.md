@@ -1,5 +1,16 @@
 # Journal des modifications
 
+## À publier
+
+### Changé
+- GitHub : tout passe par l'API REST (`gh api`), plus par GraphQL, dont le quota (partagé entre sessions) s'épuisait.
+  `grist-board.sh` lit les issues et les éléments du tableau, écrit les statuts, crée et renomme les issues, pose
+  les sous-issues et ajoute au tableau en REST ; les commandes `/grist-ship`, `/grist-release`, `/grist-plan` et
+  `/grist-continue` utilisent des appels REST pour les PR et les issues ; `grist-init` crée le dépôt en REST.
+- Seule exception, une fois par projet : `grist-init` crée le projet GitHub, y remplace les options du champ
+  `Status` par les six statuts et le lie au dépôt, ce que l'API REST ne permet pas (GraphQL).
+- Un test interdit `gh issue`, `gh pr`, `gh project item…` et GraphQL partout ailleurs ; le faux `gh` refuse ces appels.
+
 ## 0.2.0 - 2026-11-18
 
 ### Changé

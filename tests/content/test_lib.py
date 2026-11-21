@@ -398,3 +398,19 @@ def test_aucun_reste_de_dm_dans_lib():
 def test_scripts_syntaxe_valide_et_executables(script):
     assert subprocess.run(["bash", "-n", str(script)], capture_output=True).returncode == 0
     assert os.access(script, os.X_OK)
+
+
+def test_github_uniquement_en_rest_sauf_la_creation_du_projet():
+    """Le quota GraphQL, partagé entre sessions, s'épuise : `gh issue|pr|project item…` et GraphQL sont bannis
+    du flux. Seules exceptions : grist-init.sh, une fois par projet (créer le projet, ses options, le lier)."""
+    interdit = re.compile(r"gh (issue|pr|label|repo create|project (item|field|view|list|delete|close|edit))\b|graphql")
+    permis = {"src/lib/grist-init.sh": re.compile(r"graphql|gh project (create|link)")}
+    for f in sorted((RACINE / "src").rglob("*")):
+        if not f.is_file() or f.suffix not in (".sh", ".md", ".json", "") or f.name.startswith("."):
+            continue
+        rel = str(f.relative_to(RACINE))
+        for n, ligne in enumerate(f.read_text(errors="ignore").splitlines(), 1):
+            if interdit.search(ligne) and not ("jamais" in ligne and "gh api" in ligne):
+                autorise = permis.get(rel)
+                assert autorise and autorise.search(ligne) and not re.search(r"gh (issue|pr|label|repo create)", ligne), \
+                    f"{rel}:{n}: appel GitHub hors REST : {ligne.strip()}"

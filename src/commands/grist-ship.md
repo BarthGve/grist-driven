@@ -18,18 +18,18 @@ Travailler depuis `.worktrees/<story>/<ticket>`, dont la branche doit être exac
 
 ## Déroulé
 1. Commiter le fichier de relecture sur la branche vérifiée s'il ne l'est pas (la PR porte sa relecture), puis lancer la vérification `full` du tableau « Vérifications » d'`AGENTS.md`. Un test en échec arrête tout.
-2. Si une PR existe déjà pour la branche : `MERGED` mène directement au nettoyage, `OPEN` se poursuit. Sinon pousser et ouvrir la PR avec `gh pr create --base next`, jamais vers `main` : titre net, description structurée (quoi, pourquoi, comment tester) et verdict de la relecture (gravité max, résumé des constats).
+2. Si une PR existe déjà pour la branche : `merged` à `true` mène directement au nettoyage, `state` `open` se poursuit (`gh api "repos/{owner}/{repo}/pulls?head={owner}:<branche>&state=all"`). Sinon pousser et ouvrir la PR avec `gh api -X POST repos/{owner}/{repo}/pulls -f base=next -f head=<branche> -f title=… -f body=…` (REST), jamais vers `main` : titre net, description structurée (quoi, pourquoi, comment tester) et verdict de la relecture (gravité max, résumé des constats).
 3. Lire la stratégie dans la section « Stratégie de livraison » d'`AGENTS.md` ; faute de mention explicite `auto`, c'est le mode manuel.
 
 ## Fusion
 Toujours en `--squash` : un ticket égale un commit sur `next`.
 - **manuel** : ne pas fusionner. Dire : « PR ouverte : <url> (base : next). La fusion vous revient (relecture humaine, branche protégée, CI) : squash. Après fusion, relancer /grist-ship <story> <ticket> pour nettoyer. »
-- **auto** : `gh pr merge <url> --squash --delete-branch=false`, puis nettoyage.
+- **auto** : `gh api -X PUT repos/{owner}/{repo}/pulls/<n>/merge -f merge_method=squash` (REST, jamais `gh pr merge`), puis nettoyage.
 
 Même tout au vert, jamais de fusion en mode manuel : la porte autorise, l'humain décide. Aucune PR vers `main` ici ; la production est `/grist-release`. Aucun déploiement sur Grist non plus : voir `/grist-deploy`.
 
 ## Nettoyage, seulement après une fusion prouvée
-1. Preuve : `gh pr view feature/<story>/<ticket> --json state --jq .state` doit répondre exactement `MERGED`. Une PR ouverte, fermée sans fusion ou « sur le point d'être fusionnée » ne compte pas : aucun nettoyage. N'utiliser ni `merge-base --is-ancestor` (un squash réécrit les commits, le test échouerait toujours) ni rien d'autre que cet état.
+1. Preuve : `gh api repos/{owner}/{repo}/pulls/<n> --jq .merged` doit répondre exactement `true` (`<n>` : la PR de `feature/<story>/<ticket>`). Une PR ouverte, fermée sans fusion ou « sur le point d'être fusionnée » ne compte pas : aucun nettoyage. N'utiliser ni `merge-base --is-ancestor` (un squash réécrit les commits, le test échouerait toujours) ni rien d'autre que cet état.
 2. Worktree propre (sinon arrêt, jamais de `--force`) ; exécuter la ligne `isolation` d'`AGENTS.md` pour la remise à zéro si elle existe ; puis `git worktree remove` sur ce worktree exact.
 3. Le worktree parti, supprimer la branche : `git branch -D feature/<story>/<ticket>` (le `-D` est nécessaire à cause du squash) et sa copie distante.
 4. Tableau : `status-set <story>/<ticket> test`, puis `parent-sync <story>`, qui met l'US parent en `test` quand tous ses tickets sont `test` ou `shipped`.

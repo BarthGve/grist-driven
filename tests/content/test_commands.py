@@ -167,8 +167,8 @@ def test_review_et_ship_lisent_le_meme_verdict():
 
 def test_ship_vise_next_jamais_main_et_exige_le_document_produit():
     texte = _texte("ship")
-    assert "--base next" in texte and "docs/product/" in texte
-    assert "--squash" in texte and "MERGED" in texte
+    assert "base=next" in texte and "docs/product/" in texte
+    assert "merge_method=squash" in texte and "--jq .merged" in texte
 
 
 def test_release_bump_avant_la_pr_et_renvoie_au_deploiement():

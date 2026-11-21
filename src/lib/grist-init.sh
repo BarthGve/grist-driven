@@ -85,7 +85,13 @@ identifier_depot() {
 creer_depot_distant() {
   git remote get-url origin >/dev/null 2>&1 && return 0
   confirmer "Créer le dépôt GitHub $OWNER/$REPO ($([ "$PUBLIC" = 1 ] && echo public || echo privé)) ?"
-  gh repo create "$OWNER/$REPO" "$([ "$PUBLIC" = 1 ] && echo --public || echo --private)" --source=. --remote=origin --push
+  # REST (POST /user/repos ou /orgs/<o>/repos)  (la commande gh dédiée passe par GraphQL)
+  local chemin=orgs/$OWNER/repos
+  [ "$OWNER" != "$(gh api user -q .login 2>/dev/null || true)" ] || chemin=user/repos
+  gh api -X POST "$chemin" -f name="$REPO" -F private="$([ "$PUBLIC" = 1 ] && echo false || echo true)" >/dev/null \
+    || die "dépôt $OWNER/$REPO non créé"
+  git remote add origin "https://github.com/$OWNER/$REPO.git"
+  git push -u origin HEAD
 }
 
 proteger() { # <branche> : PR obligatoire, pas de force-push ni de suppression
@@ -104,9 +110,10 @@ configurer_distant() {
   proteger next
 }
 
-# Remplace les options du champ Status par nos six statuts (GraphQL : la CLI ne sait pas le faire) ;
-# renvoie {"id", "options": [{"id","name"}]} d'après la réponse, donc avec les nouveaux identifiants.
-remplacer_options() { # <identifiant du champ>
+# Remplace les options du champ Status par nos six statuts. SEUL appel GraphQL du flux, une fois par projet :
+# la création d'un projet et le remplacement des options d'un champ n'existent pas en REST. Tout le reste
+# (issues, éléments du tableau, statuts) passe par REST. Renvoie {"id", "options": [{"id","name"}]}.
+remplacer_options() { # <identifiant GraphQL du champ>
   local couleurs=(GRAY BLUE GREEN YELLOW ORANGE PURPLE) opts="" n i=0 rep
   while IFS= read -r n; do
     opts+="{name:\"$n\",color:${couleurs[$((i % 6))]},description:\"\"},"; i=$((i + 1))
@@ -121,6 +128,13 @@ print(json.dumps(c))
 ' "$rep"
 }
 
+# Chemin REST d'un projet : users/<compte> ou orgs/<compte> selon le type du compte.
+chemin_projet() { # <numéro>
+  local type
+  type="$(gh api "users/$OWNER" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("type",""))')" || return 1
+  [ "$type" = Organization ] && echo "orgs/$OWNER/projectsV2/$1" || echo "users/$OWNER/projectsV2/$1"
+}
+
 # --- tableau et .grist/config.json --------------------------------------------------------------------------
 creer_tableau() {
   if [ -f .grist/config.json ]; then
@@ -133,31 +147,25 @@ creer_tableau() {
   numero="$(python3 -c 'import json,sys; p=json.loads(sys.argv[1]); assert p.get("id"); print(p["number"])' "$projet")" \
     || die "réponse de gh illisible : projet sans identifiant"
   gh project link "$numero" --owner "$OWNER" --repo "$REPO" >/dev/null 2>&1 || true
-  liste="$(gh project field-list "$numero" --owner "$OWNER" --format json)"
+  liste="$(gh api "$(chemin_projet "$numero")/fields?per_page=100")" || die "champs du projet illisibles"
   fid="$(python3 -c '
 import json, sys
-for f in json.loads(sys.argv[1]).get("fields", []):
-    if f.get("name") == sys.argv[2] and f.get("options") is not None:
-        print(f["id"]); break
+for f in json.loads(sys.argv[1]):
+    if f.get("name") == sys.argv[2] and f.get("data_type") == "single_select":
+        print(f["node_id"]); break
 ' "$liste" "$CHAMP")"
-  if [ -n "$fid" ]; then
-    champ="$(remplacer_options "$fid")" || die "options du champ « $CHAMP » non remplacées"
-  else  # projet sans champ Status (peu probable) : on le crée
-    champ="$(gh project field-create "$numero" --owner "$OWNER" --name "$CHAMP" --data-type SINGLE_SELECT \
-      --single-select-options "$STATUTS" --format json)"
-  fi
+  [ -n "$fid" ] || die "champ « $CHAMP » introuvable sur le projet créé"
+  champ="$(remplacer_options "$fid")" \
+    || die "options du champ « $CHAMP » non remplacées (quota GraphQL épuisé ? réessayer plus tard)"
 
   mkdir -p .grist
-  python3 - "$OWNER" "$REPO" "$projet" "$champ" "$liste" "$STATUTS" >.grist/config.json.tmp <<'PY' \
+  python3 - "$OWNER" "$REPO" "$projet" "$champ" "$STATUTS" >.grist/config.json.tmp <<'PY' \
     || { rm -f .grist/config.json.tmp; die "tableau créé mais statuts incomplets : config non écrite"; }
 import json, sys
 
-owner, repo, projet, champ, liste, statuts = sys.argv[1:]
-projet, champ, liste = json.loads(projet), json.loads(champ), json.loads(liste)
+owner, repo, projet, champ, statuts = sys.argv[1:]
+projet, champ = json.loads(projet), json.loads(champ)
 options = {o["name"]: o["id"] for o in champ.get("options", [])}
-for f in liste.get("fields", []):  # repli : le champ créé, relu dans la liste du projet
-    if f.get("id") == champ.get("id"):
-        options = {**{o["name"]: o["id"] for o in f.get("options", [])}, **options}
 manque = [s for s in statuts.split(",") if not options.get(s)]
 if manque:
     sys.exit("identifiants de statut manquants : " + ", ".join(manque))
