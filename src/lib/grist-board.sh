@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# grist-board : tableau GitHub (Issues + Project V2) du flux.
+# grist-board : tableau GitHub (Issues + Project V2) du flux. Uniquement l'API REST (`gh api`) : le quota
+# GraphQL, partagé entre toutes les sessions, s'épuise vite.
 #
 # Statuts : backlog → ready → in progress → review → test → shipped (retours : voir TRANSITIONS).
 # Une story (clé `s01-x`) a un statut dérivé de ses tickets (clé `s01-x/t01-y`) et n'est jamais `ready`.
@@ -33,8 +34,27 @@ transitions_depuis() {
   esac
 }
 
+# --- REST du projet ----------------------------------------------------------------------------
+# PROJET = chemin REST du projet (users/<compte> ou orgs/<compte> selon le type du compte) ; FID = id numérique
+# du champ Status (la config garde l'id GraphQL, inutilisable en REST). Posés une fois par exécution.
+preparer_rest() {
+  [ -z "${FID:-}" ] || return 0
+  local type
+  type="$(gh api "users/$GRIST_OWNER" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("type",""))')" \
+    || die "type du compte « $GRIST_OWNER » illisible (réseau ? gh connecté ?)"
+  case "$type" in Organization) PROJET="orgs/$GRIST_OWNER/projectsV2/$GRIST_PROJECT_NUMBER" ;;
+    *) PROJET="users/$GRIST_OWNER/projectsV2/$GRIST_PROJECT_NUMBER" ;; esac
+  FID="$(gh api "$PROJET/fields?per_page=100" | python3 -c '
+import json, sys
+for f in json.load(sys.stdin):
+    if f.get("name") == "Status" and f.get("data_type") == "single_select":
+        print(f["id"]); break
+')" || die "champs du projet illisibles"
+  [ -n "$FID" ] || die "champ « Status » introuvable sur le projet $GRIST_PROJECT_NUMBER"
+}
+
 # --- lecture des issues ---------------------------------------------------------------------
-# La liste est lue une fois par exécution (chaque page de 100 coûte un point GraphQL).
+# Issues et éléments du tableau sont lus une fois par exécution (REST, pages de 100).
 # Toute commande lit après sa dernière écriture ; sinon vider "$CACHE" entre les deux.
 CACHE="$(mktemp)"
 trap 'rm -f "$CACHE"' EXIT
@@ -42,10 +62,52 @@ LIMITE="${GRIST_LIMITE_ISSUES:-5000}" # ponytail : au-delà, liste tronquée ave
 
 issues() {
   if [ ! -s "$CACHE" ]; then
-    gh issue list -R "$(grist_config_depot)" --state all --limit "$LIMITE" \
-      --json title,number,id,projectItems >"$CACHE"
-    [ "$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$CACHE")" -lt "$LIMITE" ] \
-      || echo "grist-board : ALERTE, $LIMITE issues lues (la limite) : des plus anciennes peuvent manquer" >&2
+    preparer_rest
+    local brut elements
+    brut="$(mktemp)"; elements="$(mktemp)"
+    gh api --paginate "repos/$(grist_config_depot)/issues?state=all&per_page=100" >"$brut" \
+      || { rm -f "$brut" "$elements"; die "lecture des issues impossible"; }
+    gh api --paginate "$PROJET/items?per_page=100&fields[]=$FID" >"$elements" \
+      || { rm -f "$brut" "$elements"; die "lecture du tableau impossible"; }
+    python3 - "$brut" "$elements" "$LIMITE" >"$CACHE" <<'PY'
+import json, re, sys
+
+def lire(chemin):  # --paginate colle les pages : [..][..]
+    texte, pos, tout, dec = open(chemin).read(), 0, [], json.JSONDecoder()
+    while pos < len(texte):
+        while pos < len(texte) and texte[pos].isspace():
+            pos += 1
+        if pos >= len(texte):
+            break
+        page, pos = dec.raw_decode(texte, pos)
+        tout += page
+    return tout
+
+limite = int(sys.argv[3])
+statuts = {}
+for e in lire(sys.argv[2]):
+    c = e.get("content") or {}
+    if e.get("content_type") != "Issue" or "number" not in c:
+        continue
+    nom = ""
+    for f in e.get("fields") or []:
+        v = f.get("value")
+        if f.get("data_type") == "single_select" and v:
+            n = v.get("name")
+            nom = n.get("raw", "") if isinstance(n, dict) else (n or "")
+    statuts[c["number"]] = {"id": e["id"], "status": {"name": nom}} if nom else {"id": e["id"]}
+liste = []
+for i in lire(sys.argv[1]):
+    if "pull_request" in i:
+        continue
+    item = statuts.get(i["number"])
+    liste.append({"title": i.get("title", ""), "number": i["number"], "id": i["id"],
+                  "projectItems": [item] if item else []})
+if len(liste) >= limite:
+    print(f"grist-board : ALERTE, {limite} issues lues (la limite) : des plus anciennes peuvent manquer", file=sys.stderr)
+json.dump(liste, sys.stdout)
+PY
+    rm -f "$brut" "$elements"
   fi
   cat "$CACHE"
 }
@@ -92,8 +154,10 @@ ecrire_statut() { # <clé> <statut> : sans contrôle de transition
   local item option
   item="$(interroger champ "$1" item)"
   option="$(grist_config_option "$2")"
-  gh project item-edit --id "$item" --project-id "$GRIST_PROJECT_ID" \
-    --field-id "$GRIST_STATUS_FIELD_ID" --single-select-option-id "$option" >/dev/null
+  preparer_rest
+  python3 -c 'import json,sys; print(json.dumps({"fields": [{"id": int(sys.argv[1]), "value": sys.argv[2]}]}))' "$FID" "$option" \
+    | gh api -X PATCH "$PROJET/items/$item" --input - >/dev/null \
+    || die "statut de « $1 » non écrit sur le tableau"
 }
 
 cmd_status_get() {
@@ -183,14 +247,20 @@ numero_depuis_url() {
   echo "$n"
 }
 
+creer_issue() { # <titre> <corps.md> : affiche l'URL de l'issue créée
+  gh api -X POST "repos/$(grist_config_depot)/issues" -f title="$1" -F body=@"$2" \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["html_url"])'
+}
+
 # Ajoute l'issue au tableau (une nouvelle tentative) puis la met en backlog ; affiche son numéro.
 mettre_au_tableau() { # <url> <clé>
   local url="$1" cle="$2" n essai ajoute=0
   n="$(numero_depuis_url "$url")"
   if [ -n "${GRIST_PROJECT_NUMBER:-}" ]; then
     for essai in 1 2; do
-      gh project item-add "$GRIST_PROJECT_NUMBER" --owner "$GRIST_OWNER" --url "$url" --format json \
-        >/dev/null 2>&1 && { ajoute=1; break; }
+      preparer_rest
+      printf '{"type":"Issue","owner":"%s","repo":"%s","number":%s}' "$GRIST_OWNER" "$GRIST_REPO" "$n" \
+        | gh api -X POST "$PROJET/items" --input - >/dev/null 2>&1 && { ajoute=1; break; }
       [ "$essai" = 2 ] || echo "grist-board : ajout de l'issue #$n ($cle) au tableau échoué, nouvelle tentative" >&2
     done
     [ "$ajoute" = 1 ] || echo "grist-board : ALERTE, l'issue #$n ($cle) n'a pas pu être ajoutée au tableau" >&2
@@ -209,9 +279,10 @@ lien_parent_par_corps() { # <n° enfant> <n° parent> <corps.md> : repli quand l
   tmp="$(mktemp)"
   cat "$3" >"$tmp"
   grep -qx "Parent: #$2" "$tmp" || printf '\n\nParent: #%s\n' "$2" >>"$tmp"
-  gh label create ticket -R "$(grist_config_depot)" --force >/dev/null 2>&1 \
-    || echo "grist-board : ALERTE, étiquette « ticket » non créée" >&2
-  gh issue edit "$1" -R "$(grist_config_depot)" --body-file "$tmp" --add-label ticket >/dev/null \
+  # 422 = l'étiquette existe déjà : sans importance
+  gh api -X POST "repos/$(grist_config_depot)/labels" -f name=ticket >/dev/null 2>&1 || true
+  { gh api -X PATCH "repos/$(grist_config_depot)/issues/$1" -F body=@"$tmp" >/dev/null \
+      && gh api -X POST "repos/$(grist_config_depot)/issues/$1/labels" -f 'labels[]=ticket' >/dev/null; } \
     || echo "grist-board : ALERTE, « Parent: #$2 » non écrit sur l'issue #$1" >&2
   rm -f "$tmp"
 }
@@ -221,7 +292,7 @@ cmd_issue_create_us() {
   [ -n "$story" ] && [ -n "$titre" ] && [ -n "$corps" ] || die "usage : issue-create-us <story> <titre> <corps.md>"
   [ -f "$corps" ] || die "fichier de corps introuvable : $corps"
   grist_config_charger
-  url="$(gh issue create -R "$(grist_config_depot)" -t "[$story] $titre" -F "$corps")"
+  url="$(creer_issue "[$story] $titre" "$corps")" || die "issue non créée"
   mettre_au_tableau "$url" "$story"
 }
 
@@ -232,14 +303,13 @@ cmd_issue_create_ticket() {
   [ -f "$corps" ] || die "fichier de corps introuvable : $corps"
   grist_config_charger
   cle="$story/$ticket"
-  url="$(gh issue create -R "$(grist_config_depot)" -t "[$cle] $titre" -F "$corps")"
+  url="$(creer_issue "[$cle] $titre" "$corps")" || die "issue non créée"
   n="$(mettre_au_tableau "$url" "$cle")"
   if parent_id="$(interroger champ "$story" id 2>/dev/null)"; then
     parent_n="$(interroger champ "$story" numero)"
     enfant_id="$(interroger champ "$cle" id 2>/dev/null || true)"
-    if [ -z "$enfant_id" ] || ! gh api graphql \
-      -f query='mutation($p:ID!,$c:ID!){addSubIssue(input:{issueId:$p,subIssueId:$c}){issue{id}}}' \
-      -f p="$parent_id" -f c="$enfant_id" >/dev/null 2>&1; then
+    if [ -z "$enfant_id" ] || ! gh api -X POST "repos/$(grist_config_depot)/issues/$parent_n/sub_issues" \
+      -F sub_issue_id="$enfant_id" >/dev/null 2>&1; then
       echo "grist-board : sous-issue indisponible pour $cle, repli sur « Parent: #$parent_n » et l'étiquette ticket" >&2
       lien_parent_par_corps "$n" "$parent_n" "$corps"
     fi
@@ -252,7 +322,8 @@ cmd_issue_adopt() {
   local cle="${1:-}" n="${2:-}" titre="${3:-}"
   [ -n "$cle" ] && [ -n "$n" ] && [ -n "$titre" ] || die "usage : issue-adopt <clé> <n° d'issue> <titre>"
   grist_config_charger
-  gh issue edit "$n" -R "$(grist_config_depot)" --title "[$cle] $titre" >/dev/null
+  gh api -X PATCH "repos/$(grist_config_depot)/issues/$n" -f title="[$cle] $titre" >/dev/null \
+    || die "issue #$n non renommée"
   mettre_au_tableau "https://github.com/$(grist_config_depot)/issues/$n" "$cle"
 }
 

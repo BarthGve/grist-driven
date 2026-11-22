@@ -29,7 +29,7 @@ Chaque ticket `t<numéro>-<slug>` est un cycle complet exécuter, relire, livrer
 3. Un choix structurant imposé par le plan devient un ADR (`templates/adr.md`).
 4. Écrire `docs/plans/<story>.md` avec l'en-tête `validated: no` (c'est la ligne que lit la porte avant tout code) et un total : somme des estimations, répartition des tailles.
 5. **Validation** (AskUserQuestion : valider, ou relire d'abord). Le résumé liste chaque ticket avec taille et estimation, plus le total ; sans les deux champs sur chaque ticket, pas de validation.
-   - Valider : remplacer par `validated: yes`, puis créer une issue **enfant** au statut `backlog` (jamais `ready`) par ticket : `bash .grist/lib/grist-board.sh issue-create-ticket <story> <ticket> "<titre> (TAILLE, Nj)" <fichier-corps>`. Titre avec taille et estimation ; corps avec les lignes `Size:` et `Estimate:` et le périmètre. Mettre à jour l'issue parent avec le total, au mieux, par `gh issue edit`.
+   - Valider : remplacer par `validated: yes`, puis créer une issue **enfant** au statut `backlog` (jamais `ready`) par ticket : `bash .grist/lib/grist-board.sh issue-create-ticket <story> <ticket> "<titre> (TAILLE, Nj)" <fichier-corps>`. Titre avec taille et estimation ; corps avec les lignes `Size:` et `Estimate:` et le périmètre. Mettre à jour l'issue parent avec le total, au mieux, par `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -F body=@<fichier>` (REST).
    - Pas d'appel à `require-ready` ici.
 
 Si le fichier existe déjà, passer directement à la validation. Cette commande ne produit ni code, ni migration, ni déploiement.
