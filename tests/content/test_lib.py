@@ -290,6 +290,24 @@ def test_board_creation_us_et_ticket_avec_repli_parent(projet):
     assert "Parent: #1" in ticket["body"] and e["item_add_calls"] == 3  # us + échec + nouvelle tentative
 
 
+def test_board_ticket_rattache_et_en_backlog_malgre_le_retard_des_listes(projet):
+    # GitHub montre une issue neuve avec retard dans ses listes REST : le ticket doit quand même
+    # devenir sous-issue de sa story et passer en backlog, sans repli « Parent: #n ».
+    poser_tableau(projet, [])
+    corps = projet.tmp / "corps.md"
+    corps.write_text("Corps.\n")
+    board(projet, "issue-create-us", "s01-x", "Ma story", corps)
+    s = json.loads(projet.etat.read_text())
+    s["liste_en_retard"] = True
+    projet.etat.write_text(json.dumps(s))
+    r = board(projet, "issue-create-ticket", "s01-x", "t01-y", "Mon ticket", corps)
+    assert r.returncode == 0 and r.stdout.strip() == "2", r.stderr
+    e = etat(projet)
+    assert e["sub_issues"] == [{"parent": "1", "enfant": "I_2"}]
+    assert "Parent: #1" not in e["issues"][1]["body"] and "sous-issue indisponible" not in r.stderr
+    assert e["edits"][-1] == {"id": "PVTI_2", "option": STATUTS["backlog"]}
+
+
 def test_board_adopte_une_issue_ecrite_a_la_main(projet):
     poser_tableau(projet, [{"title": "À la main", "number": 5, "id": "I_5", "projectItems": []}])
     r = board(projet, "issue-adopt", "s03-z", "5", "Titre propre")
