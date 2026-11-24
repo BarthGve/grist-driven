@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## Non publié
+
+### Corrigé
+- `grist-board.sh issue-create-ticket` : le ticket devient sous-issue de sa story et passe en `backlog` même quand
+  les listes REST de GitHub ne montrent pas encore l'issue neuve. Avant, il se rabattait sans bruit sur
+  « Parent: #n » et pouvait rester sans statut au tableau. L'id de l'issue est lu directement, et le statut
+  s'écrit sur l'élément renvoyé par l'ajout au tableau.
+
 ## 0.2.2 - 2026-11-22
 
 ### Corrigé

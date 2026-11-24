@@ -151,13 +151,18 @@ statut_de() { interroger statut "$1"; }
 
 # --- écriture du statut -----------------------------------------------------------------------
 ecrire_statut() { # <clé> <statut> : sans contrôle de transition
-  local item option
+  local item
   item="$(interroger champ "$1" item)"
+  ecrire_statut_item "$item" "$2" "$1"
+}
+
+ecrire_statut_item() { # <id d'élément du tableau> <statut> <clé>
+  local option
   option="$(grist_config_option "$2")"
   preparer_rest
   python3 -c 'import json,sys; print(json.dumps({"fields": [{"id": int(sys.argv[1]), "value": sys.argv[2]}]}))' "$FID" "$option" \
-    | gh api -X PATCH "$PROJET/items/$item" --input - >/dev/null \
-    || die "statut de « $1 » non écrit sur le tableau"
+    | gh api -X PATCH "$PROJET/items/$1" --input - >/dev/null \
+    || die "statut de « $3 » non écrit sur le tableau"
 }
 
 cmd_status_get() {
@@ -253,20 +258,25 @@ creer_issue() { # <titre> <corps.md> : affiche l'URL de l'issue créée
 }
 
 # Ajoute l'issue au tableau (une nouvelle tentative) puis la met en backlog ; affiche son numéro.
+# Le statut s'écrit sur l'élément renvoyé par l'ajout : les listes REST (issues, éléments du tableau)
+# montrent une issue neuve avec retard, la relire dans le cache la manquait.
 mettre_au_tableau() { # <url> <clé>
-  local url="$1" cle="$2" n essai ajoute=0
+  local url="$1" cle="$2" n essai ajoute=0 item=""
   n="$(numero_depuis_url "$url")"
   if [ -n "${GRIST_PROJECT_NUMBER:-}" ]; then
     for essai in 1 2; do
       preparer_rest
-      printf '{"type":"Issue","owner":"%s","repo":"%s","number":%s}' "$GRIST_OWNER" "$GRIST_REPO" "$n" \
-        | gh api -X POST "$PROJET/items" --input - >/dev/null 2>&1 && { ajoute=1; break; }
+      item="$(printf '{"type":"Issue","owner":"%s","repo":"%s","number":%s}' "$GRIST_OWNER" "$GRIST_REPO" "$n" \
+        | gh api -X POST "$PROJET/items" --input - 2>/dev/null \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id") or "")')" && { ajoute=1; break; }
       [ "$essai" = 2 ] || echo "grist-board : ajout de l'issue #$n ($cle) au tableau échoué, nouvelle tentative" >&2
     done
     [ "$ajoute" = 1 ] || echo "grist-board : ALERTE, l'issue #$n ($cle) n'a pas pu être ajoutée au tableau" >&2
   fi
   : >"$CACHE" # l'issue vient d'être créée : relire
-  if interroger champ "$cle" item >/dev/null 2>&1; then
+  if [ -n "$item" ]; then
+    ecrire_statut_item "$item" backlog "$cle"
+  elif interroger champ "$cle" item >/dev/null 2>&1; then
     ecrire_statut "$cle" backlog
   else
     echo "grist-board : ALERTE, l'issue #$n ($cle) n'est pas sur le tableau" >&2
@@ -307,7 +317,9 @@ cmd_issue_create_ticket() {
   n="$(mettre_au_tableau "$url" "$cle")"
   if parent_id="$(interroger champ "$story" id 2>/dev/null)"; then
     parent_n="$(interroger champ "$story" numero)"
-    enfant_id="$(interroger champ "$cle" id 2>/dev/null || true)"
+    # Lecture directe de l'issue : la liste REST du cache ne la montre pas encore.
+    enfant_id="$(gh api "repos/$(grist_config_depot)/issues/$n" 2>/dev/null \
+      | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' 2>/dev/null || true)"
     if [ -z "$enfant_id" ] || ! gh api -X POST "repos/$(grist_config_depot)/issues/$parent_n/sub_issues" \
       -F sub_issue_id="$enfant_id" >/dev/null 2>&1; then
       echo "grist-board : sous-issue indisponible pour $cle, repli sur « Parent: #$parent_n » et l'étiquette ticket" >&2

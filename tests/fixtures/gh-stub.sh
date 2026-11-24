@@ -65,13 +65,17 @@ elif route.endswith("/projectsV2/1/fields") or route.endswith("/projectsV2/7/fie
                      {"id": "d3", "name": {"raw": "Done"}}]}]))
 elif route.endswith("/issues") and methode == "GET":
     etat["list_calls"] = etat.get("list_calls", 0) + 1
+    # « en_retard » : issue neuve que la liste REST ne montre pas encore (comportement réel de GitHub)
     fin(0, json.dumps([{"title": i.get("title", ""), "number": i["number"], "id": i["id"]}
-                       for i in etat.get("issues", [])]
+                       for i in etat.get("issues", []) if not i.get("en_retard")]
                       + etat.get("pulls_dans_issues", [])))
+elif "/issues/" in route and methode == "GET" and route.rsplit("/", 1)[1].isdigit():
+    issue = issue_par_numero(route.rsplit("/", 1)[1])
+    fin(1) if issue is None else fin(0, json.dumps({"number": issue["number"], "id": issue["id"]}))
 elif "/items" in route and methode == "GET":
     noms = {v: k for k, v in etat.get("status_option_ids", {}).items()}
     liste = []
-    for i in etat.get("issues", []):
+    for i in (i for i in etat.get("issues", []) if not i.get("en_retard")):
         for item in i.get("projectItems", []):
             st = item.get("status") or {}
             valeur = {"id": st.get("optionId"), "name": {"raw": st.get("name", "")}} if st.get("name") else None
@@ -98,18 +102,22 @@ elif route.endswith("/items") and methode == "POST":
     cible = issue_par_numero(corps.get("number"))
     if cible is not None and not cible.get("projectItems"):
         cible["projectItems"] = [{"id": f"PVTI_{cible['number']}", "status": {"optionId": "opt1", "name": "backlog"}}]
-    fin(0, "{}")
+    fin(0, json.dumps({"id": cible["projectItems"][0]["id"]} if cible is not None else {}))
 elif route.endswith("/issues") and methode == "POST":
     n = numero_suivant()
     c = champs_f()
     etat.setdefault("issues", []).append({
         "title": c.get("title", ""), "number": n, "id": f"I_{n}", "body": c.get("body", ""), "labels": [],
         # le faux projet « auto-ajoute » : sans cela l'issue ne serait pas sur le tableau avant item-add
-        "projectItems": [],
+        "projectItems": [], "en_retard": bool(etat.get("liste_en_retard")),
     })
     fin(0, json.dumps({"html_url": f"https://github.com/acme/app/issues/{n}", "number": n}))
 elif "/issues/" in route and route.endswith("/sub_issues") and methode == "POST":
-    fin(1 if etat.get("subissue_fail") else 0, "{}")
+    if etat.get("subissue_fail"):
+        fin(1)
+    etat.setdefault("sub_issues", []).append({"parent": route.split("/issues/")[1].split("/")[0],
+                                              "enfant": champs_f().get("sub_issue_id")})
+    fin(0, "{}")
 elif "/issues/" in route and route.endswith("/labels") and methode == "POST":
     issue = issue_par_numero(route.split("/issues/")[1].split("/")[0])
     etiquette = champs_f().get("labels[]")
